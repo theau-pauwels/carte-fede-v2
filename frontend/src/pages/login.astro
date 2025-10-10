@@ -1,97 +1,13 @@
 ---
 import Layout from "@layouts/Layout.astro";
-const next = Astro.url.searchParams.get("next") || "/"; // redir après login
+import LoginForm from "../components/login";
+const next = Astro.url.searchParams.get("next") || "/";
 ---
+
 <Layout title="Connexion">
-  <main class="flex-1 flex flex-col gap-4 items-center p-4 justify-center">
-  <section class="w-full max-w-md">
-  <h1 class="font-semibold text-2xl text-blue-800 bg-white mb-1">Connexion</h1>
-  
-  <form id="loginForm" class="stack" novalidate>
-    <label>
-      Identifiant (email ou matricule UMONS)
-      <input 
-      id="ident" 
-      name="ident" 
-      type="text" 
-      placeholder="email OU ID 6 chiffres" 
-      autocomplete="username" 
-      required 
-      class="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" 
-      />
-    </label>
-
-    <label>
-      Mot de passe<br>
-      <input 
-      id="password" 
-      name="password" 
-      type="password" 
-      placeholder="••••••••" 
-      autocomplete="current-password" 
-      required 
-      class="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
-      
-    </label>
-    <button type="submit" class="rounded-lg border-2 border-blue-900 bg-blue-900 px-4 py-2 text-white transition duration-150 hover:bg-blue-50 hover:text-blue-900">Se connecter</button>
-    <p id="err" style="color:#b00;"></p>
-  </form>
-
-  <style>
-    .stack { display:flex; flex-direction:column; gap:.8rem; max-width:380px }
-    input, button { padding:.55rem .7rem; font-size:1rem }
-  </style>
-  
-  </section>
+  <main class="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-6">
+    <section class="w-full max-w-md">
+      <LoginForm next={next} client:load />
+    </section>
   </main>
 </Layout>
-
-<script>
-  const form = document.getElementById('loginForm');
-  const $err = document.getElementById('err');
-
-  function isSixDigits(s){ return /^\d{6}$/.test(s.trim()); }
-  function isEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim()); }
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    $err.textContent = '';
-
-    const ident = document.getElementById('ident').value.trim();
-    const password = document.getElementById('password').value;
-
-    if (!ident || !password) { $err.textContent = "Identifiant et mot de passe requis."; return; }
-
-    let payload = { password };
-    if (isEmail(ident)) {
-      payload.email = ident.toLowerCase();
-    } else if (isSixDigits(ident)) {
-      payload.identifiant = ident; // côté backend: pris en charge
-    } else {
-      $err.textContent = "Saisis un email valide ou un ID à 6 chiffres.";
-      return;
-    }
-
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      credentials: 'include',
-      body: JSON.stringify(payload)
-    });
-
-    if (!res.ok) {
-      try {
-        const j = await res.json();
-        $err.textContent = j.error || ('Erreur ' + res.status);
-      } catch {
-        $err.textContent = 'Erreur ' + res.status;
-      }
-      return;
-    }
-
-    // OK → redirige
-    const next = new URLSearchParams(window.location.search).get('next') || '/';
-    location.href = next;
-  });
-</script>

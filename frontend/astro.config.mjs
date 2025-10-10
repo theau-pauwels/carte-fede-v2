@@ -15,7 +15,7 @@ export default defineConfig({
     sitemap(),
     robotsTxt(),
   ],
-  site: "http://carte-fede-test.magellan.fpms.ac.be",
+  site: "https://carte.fede.fpms.ac.be",
   output: "static",
   adapter: vercel({
     webAnalytics: {
@@ -37,7 +37,7 @@ export default defineConfig({
          'localhost',
          '127.0.0.1',
          '::1',
-         'magellan.fpms.ac.be',
+         'fede.fpms.ac.be',
        ],
        hmr: {
          protocol: 'ws',

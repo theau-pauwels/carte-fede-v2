@@ -1,10 +1,12 @@
 ---
 import Layout from "@layouts/Layout.astro";
-import Carte from "../../components/carte"; // adapte le chemin selon ton arborescence
+import Carte from "../../components/carte"; 
+import RequireAuth from "@components/RequireAuth";
 ---
 
 <Layout title="Admin">
   <main class="flex-1 flex flex-col gap-4 items-center p-4 justify-center">
+    <RequireAuth client:load> 
     <section class="w-full max-w-md">
       <!-- Tu peux déplacer ces meta dans le Layout si tu préfères -->
       <meta charset="utf-8" />
@@ -36,5 +38,6 @@ import Carte from "../../components/carte"; // adapte le chemin selon ton arbore
       <!-- Composant React hydraté côté client -->
       <Carte client:load />
     </section>
+    </RequireAuth>
   </main>
 </Layout>

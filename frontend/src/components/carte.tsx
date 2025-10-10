@@ -35,14 +35,17 @@ export default function Carte() {
       return;
     }
 
+    const prenom = data.prenom?.trim() || "*";
+    const nom = data.nom?.trim() || "*";
+
     // Création de l'utilisateur
     const res = await fetch("/api/admin/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({
-        prenom: data.prenom,
-        nom: data.nom,
+        prenom,
+        nom,
         member_id: data.member_id,
         email: data.email,
         password: data.password,
@@ -82,14 +85,14 @@ export default function Carte() {
 
   return (
     <form id="create" onSubmit={handleSubmit}>
-        <div className="row">
+        {/* <div className="row">
           <label>Prénom<br/>
             <input name="prenom" required className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></input>
           </label>
           <label>Nom<br/>
             <input name="nom" required className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></input>
           </label>
-        </div>
+        </div> */}
 
       <label>
         Identifiant (6 chiffres) — option 1<br />
@@ -151,6 +154,7 @@ export default function Carte() {
             >
               <option value="2025-2026">2025-2026</option>
               <option value="2026-2027">2026-2027</option>
+              <option value="2027-2028">2027-2028</option>
             </select>
           </label>
 
