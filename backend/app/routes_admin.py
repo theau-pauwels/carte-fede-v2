@@ -2,7 +2,8 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from sqlalchemy.orm import joinedload
-from .models import db, User, Role, Membership
+from .models import db, User, Role, Membership, Room, VoteSession, VoteOption, VoteBallot
+from datetime import datetime, timedelta
 import re
 
 bp_admin = Blueprint("admin", __name__)
@@ -16,6 +17,28 @@ def _require_admin():
 
 def is_admin():
     return current_user.is_authenticated and current_user.role == Role.ADMIN
+
+def _room_to_dict(room: Room):
+    return {
+        "id": room.id,
+        "title": room.title,
+        "code": room.code,
+        "password": room.password,
+        "created_at": room.created_at.isoformat() if room.created_at else None,
+        "expires_at": room.expires_at.isoformat() if room.expires_at else None,
+        "created_by": room.created_by,
+    }
+
+def _session_to_dict(session: VoteSession):
+    return {
+        "id": session.id,
+        "room_id": session.room_id,
+        "question": session.question,
+        "status": session.status,
+        "created_at": session.created_at.isoformat() if session.created_at else None,
+        "closed_at": session.closed_at.isoformat() if session.closed_at else None,
+        "options": [{"id": o.id, "text": o.text} for o in (session.options or [])],
+    }
 
 @bp_admin.route("/api/admin/users", methods=["GET", "POST"])
 @login_required
@@ -189,3 +212,133 @@ def get_next_card_number():
 
     next_num = max(nums) + 1 if nums else 1
     return jsonify({"next_num": next_num})
+
+# ---------------- Rooms (admin) ----------------
+@bp_admin.route("/api/admin/rooms", methods=["GET", "POST"])
+@login_required
+def admin_rooms_collection():
+    if request.method == "POST":
+        data = request.get_json() or {}
+        title = str(data.get("title") or "").strip()
+        duration = data.get("duration_minutes") or 30
+        password = str(data.get("password") or "").strip() or None
+
+        if not title:
+            return jsonify({"error": "Titre requis"}), 400
+
+        try:
+            duration = int(duration)
+        except Exception:
+            return jsonify({"error": "Durée invalide"}), 400
+        if duration <= 0 or duration > 24 * 60:
+            return jsonify({"error": "Durée invalide"}), 400
+
+        # Générer code unique
+        code = None
+        for _ in range(10):
+            candidate = Room.generate_code(6)
+            if not Room.query.filter_by(code=candidate).first():
+                code = candidate
+                break
+        if not code:
+            return jsonify({"error": "Impossible de générer un code"}), 500
+
+        if not password:
+            password = Room.generate_password(10)
+
+        now = datetime.utcnow()
+        room = Room(
+            title=title,
+            code=code,
+            password=password,
+            created_at=now,
+            expires_at=now + timedelta(minutes=duration),
+            created_by=current_user.id,
+        )
+        db.session.add(room)
+        db.session.commit()
+        return jsonify(_room_to_dict(room)), 201
+
+    rooms = Room.query.order_by(Room.created_at.desc()).all()
+    return jsonify([_room_to_dict(r) for r in rooms])
+
+@bp_admin.route("/api/admin/rooms/<room_id>", methods=["DELETE"])
+@login_required
+def admin_delete_room(room_id):
+    room = Room.query.get(room_id)
+    if not room:
+        return jsonify({"error": "Room introuvable"}), 404
+    db.session.delete(room)
+    db.session.commit()
+    return jsonify({"ok": True})
+
+@bp_admin.route("/api/admin/rooms/<room_id>/extend", methods=["PUT"])
+@login_required
+def admin_extend_room(room_id):
+    data = request.get_json() or {}
+    minutes = data.get("minutes")
+    try:
+        minutes = int(minutes)
+    except Exception:
+        return jsonify({"error": "minutes invalide"}), 400
+    if minutes <= 0 or minutes > 24 * 60:
+        return jsonify({"error": "minutes invalide"}), 400
+
+    room = Room.query.get(room_id)
+    if not room:
+        return jsonify({"error": "Room introuvable"}), 404
+
+    if room.expires_at is None:
+        room.expires_at = datetime.utcnow() + timedelta(minutes=minutes)
+    else:
+        room.expires_at = room.expires_at + timedelta(minutes=minutes)
+    db.session.commit()
+    return jsonify(_room_to_dict(room))
+
+@bp_admin.route("/api/admin/rooms/<room_id>/vote", methods=["POST"])
+@login_required
+def admin_create_vote(room_id):
+    data = request.get_json() or {}
+    question = str(data.get("question") or "").strip()
+    options = data.get("options") or []
+
+    if not question:
+        return jsonify({"error": "Question requise"}), 400
+    if not isinstance(options, list):
+        return jsonify({"error": "Options invalides"}), 400
+
+    clean_options = [str(o).strip() for o in options if str(o).strip()]
+    if len(clean_options) < 2:
+        return jsonify({"error": "Au moins 2 options requises"}), 400
+
+    room = Room.query.get(room_id)
+    if not room:
+        return jsonify({"error": "Room introuvable"}), 404
+
+    # Close existing open session
+    open_session = VoteSession.query.filter_by(room_id=room_id, status="open").first()
+    if open_session:
+        open_session.status = "closed"
+        open_session.closed_at = datetime.utcnow()
+
+    session = VoteSession(room_id=room_id, question=question, status="open")
+    db.session.add(session)
+    db.session.flush()
+
+    for text in clean_options:
+        db.session.add(VoteOption(session_id=session.id, text=text))
+
+    db.session.commit()
+    return jsonify(_session_to_dict(session)), 201
+
+@bp_admin.route("/api/admin/rooms/<room_id>/vote/<session_id>/close", methods=["PUT"])
+@login_required
+def admin_close_vote(room_id, session_id):
+    session = VoteSession.query.filter_by(id=session_id, room_id=room_id).first()
+    if not session:
+        return jsonify({"error": "Vote introuvable"}), 404
+    if session.status != "closed":
+        session.status = "closed"
+        session.closed_at = datetime.utcnow()
+        db.session.commit()
+    return jsonify(_session_to_dict(session))

@@ -2,6 +2,9 @@ from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from .models import db, User, Role
 from werkzeug.security import generate_password_hash, check_password_hash
+from itsdangerous import BadSignature, SignatureExpired
+from .email_utils import send_email
+from .password_reset import generate_reset_token, verify_reset_token
 from sqlalchemy.exc import IntegrityError
 
 
@@ -128,6 +131,80 @@ def change_password():
 
     # Mettre à jour le mot de passe
     current_user.password_hash = generate_password_hash(new_password)
+    db.session.commit()
+
+    return jsonify({"ok": True})
+
+
+@bp_auth.route("/api/auth/request-password-reset", methods=["POST"])
+def request_password_reset():
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+    ident = (data.get("identifiant") or "").strip()
+    if not email and not ident:
+        return jsonify({"ok": True})
+
+    user = User.query.filter_by(email=email).first()
+    if not user and ident and ident.isdigit() and len(ident) == 6:
+        user = User.query.filter_by(member_id=ident).first()
+    if not user:
+        return jsonify({"ok": True})
+
+    token = generate_reset_token(user)
+    base_url = (current_app.config.get("FRONTEND_BASE_URL") or "").strip()
+    if not base_url:
+        base_url = request.host_url.rstrip("/")
+    reset_url = f"{base_url}/ResetPassword?token={token}"
+    max_age = int(current_app.config.get("PASSWORD_RESET_TOKEN_MAX_AGE", 3600))
+    minutes = max(1, int(max_age / 60))
+
+    body = (
+        f"Bonjour {user.prenom or ''},\n\n"
+        "Une demande de reinitialisation de mot de passe a ete faite pour votre compte.\n"
+        f"Pour choisir un nouveau mot de passe, cliquez sur ce lien (valable {minutes} min):\n"
+        f"{reset_url}\n\n"
+        "Si vous n'etes pas a l'origine de cette demande, ignorez cet email."
+    )
+
+    recipient = user.email or (
+        f"{user.member_id}@umons.ac.be" if user.member_id else None
+    )
+    if not recipient:
+        return jsonify({"ok": True})
+
+    try:
+        send_email(recipient, "Reinitialisation de mot de passe", body)
+    except Exception:
+        current_app.logger.exception("Password reset email failed")
+
+    return jsonify({"ok": True})
+
+
+@bp_auth.route("/api/auth/reset-password", methods=["POST"])
+def reset_password():
+    data = request.get_json(silent=True) or {}
+    token = (data.get("token") or "").strip()
+    new_password = (data.get("new_password") or "").strip()
+
+    if not token or not new_password or len(new_password) < 8:
+        return jsonify({"error": "Champs invalides ou mot de passe trop court"}), 400
+
+    try:
+        payload = verify_reset_token(
+            token, int(current_app.config.get("PASSWORD_RESET_TOKEN_MAX_AGE", 3600))
+        )
+    except SignatureExpired:
+        return jsonify({"error": "Lien expiré"}), 400
+    except BadSignature:
+        return jsonify({"error": "Lien invalide"}), 400
+
+    user_id = payload.get("uid")
+    password_hash = payload.get("ph")
+    user = User.query.get(user_id) if user_id else None
+    if not user or user.password_hash != password_hash:
+        return jsonify({"error": "Lien invalide"}), 400
+
+    user.password_hash = generate_password_hash(new_password)
     db.session.commit()
 
     return jsonify({"ok": True})
