@@ -1,60 +1,9 @@
 ---
-import Layout from "../../layouts/Layout.astro";
-import RequireAuth from "@components/RequireAuth";
+import Layout from "@layouts/Layout.astro";
+import AppQr from "@components/app/AppQr";
 ---
 <Layout title="Mon QR carte fédé">
-  <main class="flex-1 flex flex-col gap-4 items-center p-4 justify-center">
-    <RequireAuth client:load>
-  <h1 class="font-semibold text-2xl text-blue-800 bg-white mb-1">Mon QR – Carte fédé</h1>
-
-  <p>Sélectionne la période :</p>
-  <select id="sel"></select>
-
-  <div id="zone" style="margin-top:1rem;">
-    <img id="qr" alt="QR carte" style="max-width:280px; display:none; border:1px solid #ddd; padding:8px;"/>
-    <p id="msg" class="muted">Choisis une période pour afficher le QR.</p>
+  <div class="min-h-screen bg-gradient-to-br from-slate-100 via-sky-50 to-blue-100">
+    <AppQr client:load />
   </div>
-
-  <style>
-    .muted{color:#666}
-  </style>
-  </RequireAuth>
-  </main>
 </Layout>
-
-<script>
-  function labelFromStart(y){ return `${y}-${y+1}`; }
-
-  async function main() {
-    // doit être connecté
-    const me = await fetch('/api/me', { credentials:'include' });
-    if (!me.ok) return location.href = '/login?next=' + encodeURIComponent(location.pathname);
-
-    // récupérer ses cartes pour connaitre les années disponibles
-    const res = await fetch('/api/memberships', { credentials:'include' });
-    const data = res.ok ? await res.json() : [];
-    data.sort((a,b)=>b.annee-a.annee);
-
-    const sel = document.getElementById('sel');
-    const qr = document.getElementById('qr');
-    const msg = document.getElementById('msg');
-
-    if (!data.length) {
-      msg.textContent = "Aucune carte : impossible de générer un QR.";
-      return;
-    }
-
-    sel.innerHTML = data.map(x => `<option value="${x.annee}">${labelFromStart(x.annee)} — ${x.annee_code}</option>`).join('');
-
-    function refresh(){
-      const year = sel.value;
-      qr.src = `/api/qr/${year}.png`;
-      qr.style.display = 'inline-block';
-      msg.textContent = "";
-    }
-
-    sel.addEventListener('change', refresh);
-    refresh();
-  }
-  main();
-</script>

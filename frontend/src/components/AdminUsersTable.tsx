@@ -123,20 +123,82 @@ export default function AdminUsersTable() {
 
   const yearRanges = makeYearRanges();
 
+  const totalUsers = users.length;
+  const totalCards = users.reduce((sum, u) => sum + (u.cartes ? Object.keys(u.cartes).length : 0), 0);
+
+  const downloadExcel = () => {
+    if (!users.length) return;
+    const yearSet = new Set<string>();
+    users.forEach(u => {
+      Object.keys(u.cartes ?? {}).forEach(year => yearSet.add(year));
+    });
+    const yearColumns = Array.from(yearSet).sort((a, b) => {
+      const numA = parseInt(a, 10);
+      const numB = parseInt(b, 10);
+      if (!Number.isNaN(numA) && !Number.isNaN(numB)) return numB - numA;
+      if (!Number.isNaN(numA)) return -1;
+      if (!Number.isNaN(numB)) return 1;
+      return b.localeCompare(a);
+    });
+    const header = ["Nom", "Prénom", "Identifiant", "Rôle", ...yearColumns];
+    const rows = users.map(u => [
+      u.nom,
+      u.prenom,
+      u.identifiant ?? "",
+      u.role,
+      ...yearColumns.map(year => u.cartes?.[year] ?? ""),
+    ]);
+    const escapeCell = (value: string) => `"${value.replace(/"/g, '""')}"`;
+    const tableContent = [header, ...rows]
+      .map(row => row.map(cell => escapeCell(String(cell ?? ""))).join(";"))
+      .join("\n");
+    const blob = new Blob(["\uFEFF" + tableContent], {
+      type: "application/vnd.ms-excel;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `utilisateurs-${new Date().toISOString().split("T")[0]}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
+
   return (
-    <table className="w-full border-collapse border">
-      <thead>
-        <tr>
-          <th className="border px-2 py-1">Nom</th>
-          <th className="border px-2 py-1">Prénom</th>
-          <th className="border px-2 py-1">Identifiant</th>
-          <th className="border px-2 py-1">Cartes</th>
-          <th className="border px-2 py-1">Ajouter une carte</th>
-          <th className="border px-2 py-1">Rôle</th>
-          <th className="border px-2 py-1">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
+    <>
+      <div className="mb-4 flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-2">
+          <span className="rounded-full bg-blue-50 px-4 py-2 text-sm text-blue-700 sm:text-base">
+            <span className="font-semibold">{totalUsers}</span> utilisateurs
+          </span>
+          <span className="rounded-full bg-emerald-50 px-4 py-2 text-sm text-emerald-700 sm:text-base">
+            <span className="font-semibold">{totalCards}</span> cartes
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={downloadExcel}
+          disabled={!totalUsers}
+          className="flex items-center gap-2 self-start rounded-full bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:from-blue-700 hover:to-blue-600 disabled:cursor-not-allowed disabled:from-gray-400 disabled:text-gray-200 disabled:to-gray-400 disabled:shadow-none sm:self-auto sm:text-base"
+        >
+          <span aria-hidden>📥</span>
+          Exporter en Excel
+        </button>
+      </div>
+      <table className="w-full border-collapse border">
+        <thead>
+          <tr>
+            <th className="border px-2 py-1">Nom</th>
+            <th className="border px-2 py-1">Prénom</th>
+            <th className="border px-2 py-1">Identifiant</th>
+            <th className="border px-2 py-1">Cartes</th>
+            <th className="border px-2 py-1">Ajouter une carte</th>
+            <th className="border px-2 py-1">Rôle</th>
+            <th className="border px-2 py-1">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
         {users.map(u => (
           <tr key={u.id}>
             <td className="border px-2 py-1">
@@ -213,6 +275,7 @@ export default function AdminUsersTable() {
           </tr>
         ))}
       </tbody>
-    </table>
+      </table>
+    </>
   );
 }

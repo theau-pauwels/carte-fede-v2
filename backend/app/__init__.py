@@ -5,7 +5,6 @@ from .models import db, User
 from .routes_auth import bp_auth
 from .routes_admin import bp_admin
 from .routes_memberships import bp_mem
-from .routes_rooms import bp_rooms
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 def create_app():
@@ -51,10 +50,13 @@ def create_app():
     app.register_blueprint(bp_auth)
     app.register_blueprint(bp_admin)
     app.register_blueprint(bp_mem)
-    app.register_blueprint(bp_rooms)
 
-    # Auto-create tables if missing (no migrations in this project)
-    with app.app_context():
-        db.create_all()
+    # Auto-create tables only when explicitly enabled (avoid touching existing DBs)
+    if os.getenv("AUTO_CREATE_DB", "").lower() in ("1", "true", "yes"):
+        with app.app_context():
+            try:
+                db.create_all()
+            except Exception:
+                app.logger.exception("Auto-create tables failed")
 
     return app

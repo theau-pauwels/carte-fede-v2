@@ -1,20 +1,9 @@
 ---
 import Layout from "@layouts/Layout.astro";
-import MembershipTable from "../components/MembershipTable";
-import RequireAuth from "@components/RequireAuth"
+import AppCartes from "@components/app/AppCartes";
 ---
 <Layout title="Mes cartes">
-  <main class="flex-1 flex flex-col gap-4 items-center p-4 justify-center">
-    <RequireAuth client:load>
-    <section class="w-full max-w-md">
-      <h1 class="font-semibold text-2xl text-blue-800 bg-white mb-1">Mes cartes</h1>
-      <MembershipTable client:load />
-      <p style="margin-top:.75rem">
-        <a href="/app/qr" class="rounded-lg border-2 border-blue-900 bg-blue-900 px-4 py-2 text-white transition duration-150 hover:bg-blue-50 hover:text-blue-900">
-          Afficher mon QR
-        </a>
-      </p>
-    </section>
-    </RequireAuth>
-  </main>
+  <div class="min-h-screen bg-gradient-to-br from-slate-100 via-sky-50 to-blue-100">
+    <AppCartes client:load />
+  </div>
 </Layout>
