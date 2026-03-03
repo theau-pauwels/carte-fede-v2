@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="fr-BE">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#1e3a8a" />
+    <title>Hors ligne | Carte Fede FPMs</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Poppins, system-ui, sans-serif;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(180deg, #eff6ff 0%, #ffffff 45%, #f8fafc 100%);
+        color: #0f172a;
+      }
+
+      main {
+        width: min(92vw, 32rem);
+        border: 1px solid #dbeafe;
+        border-radius: 1.5rem;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 20px 50px rgba(30, 58, 138, 0.12);
+        padding: 2rem;
+      }
+
+      .badge {
+        display: inline-flex;
+        border-radius: 999px;
+        background: #dbeafe;
+        color: #1d4ed8;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        padding: 0.45rem 0.8rem;
+      }
+
+      h1 {
+        margin: 1rem 0 0.75rem;
+        font-size: clamp(1.8rem, 4vw, 2.4rem);
+        line-height: 1.1;
+        color: #1e3a8a;
+      }
+
+      p {
+        margin: 0;
+        line-height: 1.7;
+        color: #475569;
+      }
+
+      a {
+        display: inline-flex;
+        margin-top: 1.5rem;
+        border-radius: 0.9rem;
+        background: #1e3a8a;
+        color: #fff;
+        text-decoration: none;
+        font-weight: 600;
+        padding: 0.85rem 1.1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <span class="badge">Mode hors ligne</span>
+      <h1>Connexion requise pour verifier la carte.</h1>
+      <p>
+        L'app est ouverte, mais certaines donnees demandent encore une connexion Internet.
+        Reconnecte-toi des que le reseau revient pour retrouver la carte et le QR.
+      </p>
+      <a href="/">Retour a l'accueil</a>
+    </main>
+  </body>
+</html>

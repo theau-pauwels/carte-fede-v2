@@ -5,39 +5,55 @@ import RequireAuth from "@components/RequireAuth";
 ---
 
 <Layout title="Admin">
-  <main class="flex-1 flex flex-col gap-4 items-center p-4 justify-center">
-    <RequireAuth client:load> 
-    <section class="w-full max-w-md">
-      <!-- Tu peux déplacer ces meta dans le Layout si tu préfères -->
-      <meta charset="utf-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <main class="min-h-[calc(100vh-12rem)] bg-gradient-to-b from-slate-50 via-white to-blue-50/40 px-4 py-8 sm:px-6 lg:px-8">
+    <RequireAuth client:load>
+      <section class="mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[1.05fr_1.45fr]">
+        <div class="overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-900 via-blue-800 to-sky-700 text-white shadow-xl shadow-blue-900/10">
+          <div class="space-y-5 p-6 sm:p-8">
+            <span class="inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-blue-50">
+              Espace admin
+            </span>
+            <div class="space-y-3">
+              <h1 class="text-3xl font-semibold leading-tight sm:text-4xl">Creer un utilisateur rapidement</h1>
+              <p class="max-w-xl text-sm leading-6 text-blue-100 sm:text-base">
+                Utilise le matricule UMONS ou un email, choisis un role, puis ajoute directement une carte si necessaire.
+              </p>
+            </div>
 
-      <style>
-        form { max-width: 520px; display: grid; gap: .75rem; margin-top: 1rem; }
-        input, select, button { padding: .6rem .8rem; font-size: 1rem; }
-        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-        .bar { display:flex; gap:.75rem; align-items:center; }
-        .ok { color: #0a7; }
-        .err { color: #b00020; }
-        .muted { color:#666; font-size:.9rem; }
-        a.btn { display:inline-block; padding:.4rem .6rem; border:1px solid #ddd; border-radius:.5rem; }
-      </style>
-      <style global>
-      .muted { color:#666; font-size:.9rem; }
-      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-      .ok { color:#0a7; }
-      .err { color:#b00020; }
-      </style>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <div class="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-100">Identifiant</p>
+                <p class="mt-2 text-sm text-white/90">`member_id` 6 chiffres ou adresse email.</p>
+              </div>
+              <div class="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-100">Raccourci</p>
+                <a
+                  href="/admin/users"
+                  class="mt-2 inline-flex items-center rounded-xl border border-white/20 bg-white px-3 py-2 text-sm font-semibold text-blue-900 transition hover:bg-blue-50"
+                >
+                  Voir la liste des utilisateurs
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
 
+        <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60 sm:p-8">
+          <div class="mb-6 flex flex-col gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 class="text-2xl font-semibold text-blue-900">Nouveau compte</h2>
+              <p class="mt-1 text-sm text-slate-600">
+                Renseigne <strong>member_id</strong> ou <strong>email</strong>, puis complete les options ci-dessous.
+              </p>
+            </div>
+            <span class="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">
+              Formulaire de creation
+            </span>
+          </div>
 
-      <h1 class="font-semibold text-2xl text-blue-800 bg-white mb-1">Créer un utilisateur</h1>
-      <p class="muted">
-        Renseigner <strong>member_id (6 chiffres du matricule UMONS)</strong> OU <strong>email</strong>.
-      </p>
-
-      <!-- Composant React hydraté côté client -->
-      <Carte client:load />
-    </section>
+          <Carte client:load />
+        </div>
+      </section>
     </RequireAuth>
   </main>
 </Layout>

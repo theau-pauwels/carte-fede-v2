@@ -1,6 +1,5 @@
 ---
 import Layout from "@layouts/Layout.astro";
-const next = Astro.url.searchParams.get("next") || "/"; // redir après inscription
 ---
 <Layout title="Inscription">
   <main class="flex-1 flex flex-col gap-4 items-center p-4 justify-center">
@@ -47,28 +46,104 @@ const next = Astro.url.searchParams.get("next") || "/"; // redir après inscript
 
         <label>
           Mot de passe
-          <input
-            id="password"
-            name="password"
-            type="password"
-            placeholder="••••••••"
-            autocomplete="new-password"
-            required
-            class="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          <div class="password-field">
+            <input
+              id="password"
+              name="password"
+              type="password"
+              placeholder="••••••••"
+              autocomplete="new-password"
+              required
+              class="password-input border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              data-password-toggle
+              aria-label="Afficher le mot de passe"
+              aria-pressed="false"
+            >
+              <svg class="icon-show" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <path
+                  d="M1.5 12s3.5-6 10.5-6 10.5 6 10.5 6-3.5 6-10.5 6S1.5 12 1.5 12Z"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                ></path>
+                <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
+              </svg>
+              <svg class="icon-hide" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <path
+                  d="M3 3l18 18"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                ></path>
+                <path
+                  d="M10.6 6.3A11.3 11.3 0 0 1 12 6c7 0 10.5 6 10.5 6a18.5 18.5 0 0 1-3.2 3.8M6.7 6.7C3.5 8.7 1.5 12 1.5 12s3.5 6 10.5 6c1.8 0 3.4-.4 4.8-1"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                ></path>
+              </svg>
+            </button>
+          </div>
         </label>
 
         <label>
           Confirmer le mot de passe
-          <input
-            id="password2"
-            name="password2"
-            type="password"
-            placeholder="••••••••"
-            autocomplete="new-password"
-            required
-            class="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          <div class="password-field">
+            <input
+              id="password2"
+              name="password2"
+              type="password"
+              placeholder="••••••••"
+              autocomplete="new-password"
+              required
+              class="password-input border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              data-password-toggle
+              aria-label="Afficher le mot de passe"
+              aria-pressed="false"
+            >
+              <svg class="icon-show" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <path
+                  d="M1.5 12s3.5-6 10.5-6 10.5 6 10.5 6-3.5 6-10.5 6S1.5 12 1.5 12Z"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                ></path>
+                <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
+              </svg>
+              <svg class="icon-hide" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <path
+                  d="M3 3l18 18"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                ></path>
+                <path
+                  d="M10.6 6.3A11.3 11.3 0 0 1 12 6c7 0 10.5 6 10.5 6a18.5 18.5 0 0 1-3.2 3.8M6.7 6.7C3.5 8.7 1.5 12 1.5 12s3.5 6 10.5 6c1.8 0 3.4-.4 4.8-1"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                ></path>
+              </svg>
+            </button>
+          </div>
         </label>
 
         <button
@@ -103,24 +178,32 @@ const next = Astro.url.searchParams.get("next") || "/"; // redir après inscript
     if (!r.ok) return location.href = '/login?next=' + encodeURIComponent(location.pathname);
     const me = await r.json();
     if (me.role !== 'admin') return location.href = '/';
-    document.getElementById('who').textContent = `Connecté : ${me.email} (${me.role})`;
+    const who = document.getElementById('who');
+    if (who) {
+      who.textContent = `Connecté : ${me.email} (${me.role})`;
+    }
   }
   guard();
 
+  const form = document.getElementById('signupForm') as HTMLFormElement | null;
+  const $err = document.getElementById('err') as HTMLParagraphElement | null;
+  const nomInput = document.getElementById('nom') as HTMLInputElement | null;
+  const prenomInput = document.getElementById('prenom') as HTMLInputElement | null;
+  const emailInput = document.getElementById('email') as HTMLInputElement | null;
+  const passwordInput = document.getElementById('password') as HTMLInputElement | null;
+  const password2Input = document.getElementById('password2') as HTMLInputElement | null;
 
-
-  const form = document.getElementById('signupForm');
-  const $err = document.getElementById('err');
-
-  form.addEventListener('submit', async (e) => {
+  form?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!$err || !nomInput || !prenomInput || !emailInput || !passwordInput || !password2Input) return;
+
     $err.textContent = '';
 
-    const nom = document.getElementById('nom').value.trim();
-    const prenom = document.getElementById('prenom').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-    const password2 = document.getElementById('password2').value;
+    const nom = nomInput.value.trim();
+    const prenom = prenomInput.value.trim();
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+    const password2 = password2Input.value;
 
     if (!nom || !prenom || !email || !password || !password2) {
       $err.textContent = "Tous les champs sont obligatoires.";

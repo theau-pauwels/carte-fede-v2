@@ -80,17 +80,55 @@ const LoginForm: React.FC<LoginFormProps> = ({ next = "/" }) => {
         />
 
         <label htmlFor="password">Mot de passe</label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          placeholder="••••••••"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          required
-        />
+        <div className="password-field">
+          <input
+            id="password"
+            name="password"
+            type="password"
+            placeholder="••••••••"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="password-input border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+          <button
+            type="button"
+            className="password-toggle"
+            data-password-toggle
+            aria-label="Afficher le mot de passe"
+            aria-pressed="false"
+          >
+            <svg className="icon-show" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path
+                d="M1.5 12s3.5-6 10.5-6 10.5 6 10.5 6-3.5 6-10.5 6S1.5 12 1.5 12Z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.8" />
+            </svg>
+            <svg className="icon-hide" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path
+                d="M3 3l18 18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+              <path
+                d="M10.6 6.3A11.3 11.3 0 0 1 12 6c7 0 10.5 6 10.5 6a18.5 18.5 0 0 1-3.2 3.8M6.7 6.7C3.5 8.7 1.5 12 1.5 12s3.5 6 10.5 6c1.8 0 3.4-.4 4.8-1"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
 
         <button
           type="submit"

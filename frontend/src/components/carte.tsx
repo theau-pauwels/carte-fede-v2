@@ -84,73 +84,110 @@ export default function Carte() {
   }
 
   return (
-    <form id="create" onSubmit={handleSubmit}>
-        {/* <div className="row">
-          <label>Prénom<br/>
-            <input name="prenom" required className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></input>
-          </label>
-          <label>Nom<br/>
-            <input name="nom" required className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></input>
-          </label>
-        </div> */}
+    <form id="create" onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
+        <label className="block">
+          <span className="mb-2 block text-sm font-medium text-slate-700">Identifiant (6 chiffres)</span>
+          <input
+            name="member_id"
+            inputMode="numeric"
+            pattern="\d{6}"
+            maxLength={6}
+            placeholder="000123"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+          />
+        </label>
 
-      <label>
-        Identifiant (6 chiffres) — option 1<br />
-        <input
-          name="member_id"
-          inputMode="numeric"
-          pattern="\d{6}"
-          maxLength={6}
-          placeholder="000123"
-          className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </label>
+        <div className="flex items-center justify-center pb-2">
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            ou
+          </span>
+        </div>
 
-      <div className="muted">OU</div>
+        <label className="block">
+          <span className="mb-2 block text-sm font-medium text-slate-700">Email</span>
+          <input
+            name="email"
+            type="email"
+            placeholder="user@example.com"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+          />
+        </label>
+      </div>
 
-      <label>
-        Email — option 2<br />
-        <input
-          name="email"
-          type="email"
-          placeholder="user@example.com"
-          className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </label><br/>
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="block">
+          <span className="mb-2 block text-sm font-medium text-slate-700">Mot de passe initial</span>
+          <div className="password-field">
+            <input
+              name="password"
+              type="password"
+              minLength={8}
+              required
+              className="password-input w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+            />
+            <button
+              type="button"
+              className="password-toggle"
+              data-password-toggle
+              aria-label="Afficher le mot de passe"
+              aria-pressed="false"
+            >
+              <svg className="icon-show" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <path
+                  d="M1.5 12s3.5-6 10.5-6 10.5 6 10.5 6-3.5 6-10.5 6S1.5 12 1.5 12Z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.8" />
+              </svg>
+              <svg className="icon-hide" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <path
+                  d="M3 3l18 18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M10.6 6.3A11.3 11.3 0 0 1 12 6c7 0 10.5 6 10.5 6a18.5 18.5 0 0 1-3.2 3.8M6.7 6.7C3.5 8.7 1.5 12 1.5 12s3.5 6 10.5 6c1.8 0 3.4-.4 4.8-1"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
+        </label>
 
-      <label>
-        Mot de passe initial<br />
-        <input
-          name="password"
-          type="password"
-          minLength={8}
-          required
-          className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </label><br/>
+        <label className="block">
+          <span className="mb-2 block text-sm font-medium text-slate-700">Rôle</span>
+          <select
+            name="role"
+            required
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+          >
+            <option value="en attente">En attente</option>
+            <option value="member">Member</option>
+            <option value="verifier">Verifier</option>
+            <option value="admin">Admin</option>
+          </select>
+        </label>
+      </div>
 
-      <label>
-        Rôle<br />
-        <select
-          name="role"
-          required
-          className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="en attente">En attente</option>
-          <option value="member">Member</option>
-          <option value="verifier">Verifier</option>
-          <option value="admin">Admin</option>
-        </select>
-      </label><br/><br/>
-
-      <fieldset>
-        <legend className="muted">Ajouter directement une carte (optionnel)</legend>
-        <div className="row">
-          <label>
-            Année<br />
+      <fieldset className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+        <legend className="px-2 text-sm font-semibold text-slate-700">Carte a ajouter (optionnel)</legend>
+        <div className="mt-2 grid gap-4 md:grid-cols-3">
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-700">Annee</span>
             <select
               name="annee"
-              className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             >
               <option value="2025-2026">2025-2026</option>
               <option value="2026-2027">2026-2027</option>
@@ -158,11 +195,11 @@ export default function Carte() {
             </select>
           </label>
 
-          <label>
-            Préfixe<br />
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-700">Prefixe</span>
             <select
               name="prefix"
-              className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             >
               <option value="A">A</option>
               <option value="F">F</option>
@@ -173,27 +210,39 @@ export default function Carte() {
             </select>
           </label>
 
-          <label>
-            Numéro<br />
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-700">Numero</span>
             <input
               name="num"
               type="number"
               min={1}
               placeholder="12"
-              className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             />
           </label>
         </div>
-      </fieldset><br/>
+      </fieldset>
 
-      <button
-        type="submit"
-        className="rounded-lg border-2 border-blue-900 bg-blue-900 px-4 py-2 text-white transition duration-150 hover:bg-blue-50 hover:text-blue-900"
-      >
-        Créer
-      </button>
+      <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
+        <button
+          type="submit"
+          className="inline-flex items-center justify-center rounded-xl bg-blue-900 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-blue-800"
+        >
+          Creer l'utilisateur
+        </button>
 
-      <div className={msg.type}>{msg.text}</div>
+        {msg.text ? (
+          <div
+            className={
+              msg.type === "ok"
+                ? "rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700"
+                : "rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700"
+            }
+          >
+            {msg.text}
+          </div>
+        ) : null}
+      </div>
     </form>
   );
 }

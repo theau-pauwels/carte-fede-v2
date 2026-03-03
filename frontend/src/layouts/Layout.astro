@@ -43,7 +43,14 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
     />
     <meta name="author" content="Commission Web FPMs" />
     <meta name="viewport" content="width=device-width" />
+    <meta name="theme-color" content="#1e3a8a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Carte Fede" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="generator" content={Astro.generator} />
     <link rel="canonical" href={canonicalURL} />
     <title>{title}</title>
@@ -100,5 +107,83 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
       <slot />
     </div>
     <Footer />
+    <button
+      id="pwaInstallButton"
+      type="button"
+      class="pwa-install"
+      aria-hidden="true"
+    >
+      <span aria-hidden="true">+</span>
+      Installer l'app
+    </button>
+    <script src="/pwa-register.js" defer></script>
+    <script is:inline>
+      let deferredInstallPrompt = null;
+
+      const installButton = document.getElementById("pwaInstallButton");
+      const isStandalone =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        window.navigator.standalone === true;
+      const isIos =
+        /iphone|ipad|ipod/i.test(window.navigator.userAgent) &&
+        !/android/i.test(window.navigator.userAgent);
+
+      function showInstallButton() {
+        if (!installButton || isStandalone) return;
+        installButton.classList.add("is-visible");
+        installButton.setAttribute("aria-hidden", "false");
+      }
+
+      function hideInstallButton() {
+        if (!installButton) return;
+        installButton.classList.remove("is-visible");
+        installButton.setAttribute("aria-hidden", "true");
+      }
+
+      window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        showInstallButton();
+      });
+
+      window.addEventListener("appinstalled", () => {
+        deferredInstallPrompt = null;
+        hideInstallButton();
+      });
+
+      if (isIos && !isStandalone) {
+        showInstallButton();
+      }
+
+      installButton?.addEventListener("click", async () => {
+        if (deferredInstallPrompt) {
+          deferredInstallPrompt.prompt();
+          await deferredInstallPrompt.userChoice.catch(() => null);
+          deferredInstallPrompt = null;
+          hideInstallButton();
+          return;
+        }
+
+        if (isIos) {
+          window.alert(
+            "Sur iPhone: ouvre le menu Partager dans Safari, puis choisis 'Sur l'ecran d'accueil'."
+          );
+        }
+      });
+
+      document.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-password-toggle]");
+        if (!button) return;
+
+        const container = button.closest(".password-field");
+        const input = container?.querySelector("input");
+        if (!input) return;
+
+        const reveal = input.type === "password";
+        input.type = reveal ? "text" : "password";
+        button.setAttribute("aria-pressed", reveal ? "true" : "false");
+        button.setAttribute("aria-label", reveal ? "Masquer le mot de passe" : "Afficher le mot de passe");
+      });
+    </script>
   </body>
 </html>
