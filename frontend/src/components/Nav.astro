@@ -1,12 +1,12 @@
 ---
-import Nav from "../components/Nav"; // ton fichier Nav.tsx
+import NavMenu from "../components/Nav";
 ---
 
-<header class="sticky top-0 z-20 bg-white font-semibold text-blue-900">
-  <nav class="container mx-auto flex justify-between gap-4 p-4 lg:block">
-  <a
+<header class="sticky top-0 z-30 border-b border-slate-200 bg-white font-semibold text-blue-900 shadow-sm">
+  <div class="container mx-auto px-4 pt-4">
+    <a
       href="/"
-      class="inline-flex items-center gap-2 text-base duration-150 hover:opacity-80 xs:text-lg"
+      class="inline-flex max-w-full items-center gap-3 text-sm duration-150 hover:opacity-80 xs:text-base sm:text-lg"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -44,8 +44,10 @@ import Nav from "../components/Nav"; // ton fichier Nav.tsx
           d="M1559.14,898.22c-32.49-183.3-177.06-327.87-360.36-360.36l142.51,142.51L1226,795.69l40.91,100.52L1412,751.08Z"
           transform="translate(-168 -80)"></path>
       </svg>
-      <div>Fédération des Étudiants FPMs</div>
+      <div class="min-w-0">
+        <div class="truncate text-base leading-tight xs:text-lg sm:text-xl">Fédération des Étudiants FPMs</div>
+      </div>
     </a>
-    </nav>
-  <Nav client:load />
+  </div>
+  <NavMenu client:only="react" />
 </header>
