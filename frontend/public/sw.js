@@ -1,4 +1,4 @@
-const CACHE_VERSION = "carte-fede-v1";
+const CACHE_VERSION = "carte-fede-v2";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -37,6 +37,11 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
 
   if (request.method !== "GET" || url.origin !== self.location.origin) {
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/")) {
+    event.respondWith(fetch(request));
     return;
   }
 
