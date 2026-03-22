@@ -166,7 +166,7 @@ export default function AdminUsersTable() {
   };
 
   return (
-    <>
+    <div className="w-full">
       <div className="mb-4 flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-2">
           <span className="rounded-full bg-blue-50 px-4 py-2 text-sm text-blue-700 sm:text-base">
@@ -186,96 +186,204 @@ export default function AdminUsersTable() {
           Exporter en Excel
         </button>
       </div>
-      <table className="w-full border-collapse border">
-        <thead>
-          <tr>
-            <th className="border px-2 py-1">Nom</th>
-            <th className="border px-2 py-1">Prénom</th>
-            <th className="border px-2 py-1">Identifiant</th>
-            <th className="border px-2 py-1">Cartes</th>
-            <th className="border px-2 py-1">Ajouter une carte</th>
-            <th className="border px-2 py-1">Rôle</th>
-            <th className="border px-2 py-1">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-        {users.map(u => (
-          <tr key={u.id}>
-            <td className="border px-2 py-1">
-              {editingUserId === u.id ? (
+      <div className="space-y-3 md:hidden">
+        {users.map((u) => (
+          <article key={u.id} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+            <div className="mb-3 flex items-start justify-between gap-2">
+              <div>
+                <p className="text-base font-semibold text-slate-900">{u.prenom} {u.nom}</p>
+                <p className="text-xs text-slate-500">{u.identifiant ?? "Sans identifiant"}</p>
+              </div>
+              <select
+                value={u.role}
+                onChange={e => changeRole(u.id, e.target.value)}
+                className="rounded border border-gray-300 bg-white px-2 py-1 text-sm"
+              >
+                {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+
+            {editingUserId === u.id ? (
+              <div className="mb-3 grid grid-cols-1 gap-2">
                 <input
                   value={editValues.nom}
                   onChange={e => setEditValues(prev => ({ ...prev, nom: e.target.value }))}
-                  className="border p-1 rounded"
+                  className="w-full rounded border border-gray-300 p-2"
+                  placeholder="Nom"
                 />
-              ) : u.nom}
-            </td>
-            <td className="border px-2 py-1">
-              {editingUserId === u.id ? (
                 <input
                   value={editValues.prenom}
                   onChange={e => setEditValues(prev => ({ ...prev, prenom: e.target.value }))}
-                  className="border p-1 rounded"
+                  className="w-full rounded border border-gray-300 p-2"
+                  placeholder="Prénom"
                 />
-              ) : u.prenom}
-            </td>
-            <td className="border px-2 py-1">
-              {editingUserId === u.id ? (
                 <input
                   value={editValues.identifiant}
                   onChange={e => setEditValues(prev => ({ ...prev, identifiant: e.target.value }))}
-                  className="border p-1 rounded"
+                  className="w-full rounded border border-gray-300 p-2"
+                  placeholder="Identifiant"
                 />
-              ) : u.identifiant ?? ""}
-            </td>
-            <td className="border px-2 py-1">
-              {u.cartes && Object.entries(u.cartes).length > 0
-                ? Object.entries(u.cartes).sort((a,b)=>Number(b[0])-Number(a[0])).map(([annee, code])=>(
-                  <div key={annee}>
-                    {annee} → {code}{" "}
-                    <button className="text-red-600" onClick={()=>removeCard(u.id,annee)}>🗑</button>
-                  </div>
-                ))
-                : <span className="text-gray-400">—</span>
-              }
-            </td>
-            <td className="border px-2 py-1">
-              <form onSubmit={e => {
+              </div>
+            ) : null}
+
+            <div className="mb-3">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Cartes</p>
+              <div className="space-y-1">
+                {u.cartes && Object.entries(u.cartes).length > 0
+                  ? Object.entries(u.cartes).sort((a, b) => Number(b[0]) - Number(a[0])).map(([annee, code]) => (
+                    <div key={annee} className="flex items-center justify-between rounded bg-slate-50 px-2 py-1 text-sm">
+                      <span>{annee} - {code}</span>
+                      <button className="rounded bg-red-100 px-2 py-1 text-xs font-semibold text-red-700" onClick={() => removeCard(u.id, annee)}>
+                        Suppr.
+                      </button>
+                    </div>
+                  ))
+                  : <span className="text-sm text-gray-400">Aucune carte</span>
+                }
+              </div>
+            </div>
+
+            <form
+              onSubmit={e => {
                 e.preventDefault();
                 const f = e.currentTarget as any;
                 const annee = f.annee.value;
                 const prefix = f.prefix.value;
-                const num = parseInt(f.num.value,10);
+                const num = parseInt(f.num.value, 10);
                 addCard(u.id, annee, prefix, num);
-              }} className="flex flex-col gap-1">
-                <select name="annee" required>{yearRanges.map(y=><option key={y} value={y}>{y}</option>)}</select>
-                <select name="prefix" required>{ALLOWED_PREFIXES.map(p=><option key={p} value={p}>{p}</option>)}</select>
-                <input name="num" type="number" min={1} placeholder="Numéro" required />
-                <button type="submit" className="bg-blue-900 text-white px-2 py-1 rounded">➕</button>
-              </form>
-            </td>
-            <td className="border px-2 py-1">
-              <select value={u.role} onChange={e=>changeRole(u.id,e.target.value)}>
-                {ROLE_OPTIONS.map(r=><option key={r} value={r}>{r}</option>)}
+              }}
+              className="mb-3 grid grid-cols-1 gap-2"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Ajouter une carte</p>
+              <select name="annee" required className="w-full rounded border border-gray-300 p-2">
+                {yearRanges.map(y => <option key={y} value={y}>{y}</option>)}
               </select>
-            </td>
-            <td className="border px-2 py-1 flex gap-1">
+              <div className="grid grid-cols-2 gap-2">
+                <select name="prefix" required className="w-full rounded border border-gray-300 p-2">
+                  {ALLOWED_PREFIXES.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+                <input name="num" type="number" min={1} placeholder="Numéro" required className="w-full rounded border border-gray-300 p-2" />
+              </div>
+              <button type="submit" className="rounded bg-blue-900 px-3 py-2 text-sm font-semibold text-white">Ajouter</button>
+            </form>
+
+            <div className="flex flex-wrap gap-2">
               {editingUserId === u.id ? (
                 <>
-                  <button onClick={()=>saveUser(u.id)} className="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700">💾</button>
-                  <button onClick={()=>setEditingUserId(null)} className="bg-gray-400 text-white px-2 py-1 rounded hover:bg-gray-500">✖</button>
+                  <button onClick={() => saveUser(u.id)} className="rounded bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700">
+                    Enregistrer
+                  </button>
+                  <button onClick={() => setEditingUserId(null)} className="rounded bg-gray-400 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-500">
+                    Annuler
+                  </button>
                 </>
               ) : (
                 <>
-                  <button onClick={()=>{setEditingUserId(u.id); setEditValues({nom:u.nom, prenom:u.prenom, identifiant:u.identifiant ?? ""})}} className="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600">✏️</button>
-                  <button onClick={()=>deleteUser(u.id)} className="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">🗑</button>
+                  <button onClick={() => { setEditingUserId(u.id); setEditValues({ nom: u.nom, prenom: u.prenom, identifiant: u.identifiant ?? "" }); }} className="rounded bg-yellow-500 px-3 py-2 text-sm font-semibold text-white hover:bg-yellow-600">
+                    Modifier
+                  </button>
+                  <button onClick={() => deleteUser(u.id)} className="rounded bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700">
+                    Supprimer
+                  </button>
                 </>
               )}
-            </td>
-          </tr>
+            </div>
+          </article>
         ))}
-      </tbody>
-      </table>
-    </>
+      </div>
+
+      <div className="hidden w-full overflow-x-auto md:block">
+        <table className="w-full border-collapse border">
+          <thead>
+            <tr>
+              <th className="border px-2 py-1">Nom</th>
+              <th className="border px-2 py-1">Prénom</th>
+              <th className="border px-2 py-1">Identifiant</th>
+              <th className="border px-2 py-1">Cartes</th>
+              <th className="border px-2 py-1">Ajouter une carte</th>
+              <th className="border px-2 py-1">Rôle</th>
+              <th className="border px-2 py-1">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+          {users.map(u => (
+            <tr key={u.id}>
+              <td className="border px-2 py-1">
+                {editingUserId === u.id ? (
+                  <input
+                    value={editValues.nom}
+                    onChange={e => setEditValues(prev => ({ ...prev, nom: e.target.value }))}
+                    className="border p-1 rounded"
+                  />
+                ) : u.nom}
+              </td>
+              <td className="border px-2 py-1">
+                {editingUserId === u.id ? (
+                  <input
+                    value={editValues.prenom}
+                    onChange={e => setEditValues(prev => ({ ...prev, prenom: e.target.value }))}
+                    className="border p-1 rounded"
+                  />
+                ) : u.prenom}
+              </td>
+              <td className="border px-2 py-1">
+                {editingUserId === u.id ? (
+                  <input
+                    value={editValues.identifiant}
+                    onChange={e => setEditValues(prev => ({ ...prev, identifiant: e.target.value }))}
+                    className="border p-1 rounded"
+                  />
+                ) : u.identifiant ?? ""}
+              </td>
+              <td className="border px-2 py-1">
+                {u.cartes && Object.entries(u.cartes).length > 0
+                  ? Object.entries(u.cartes).sort((a,b)=>Number(b[0])-Number(a[0])).map(([annee, code])=>(
+                    <div key={annee}>
+                      {annee} → {code}{" "}
+                      <button className="text-red-600" onClick={()=>removeCard(u.id,annee)}>🗑</button>
+                    </div>
+                  ))
+                  : <span className="text-gray-400">—</span>
+                }
+              </td>
+              <td className="border px-2 py-1">
+                <form onSubmit={e => {
+                  e.preventDefault();
+                  const f = e.currentTarget as any;
+                  const annee = f.annee.value;
+                  const prefix = f.prefix.value;
+                  const num = parseInt(f.num.value,10);
+                  addCard(u.id, annee, prefix, num);
+                }} className="flex flex-col gap-1">
+                  <select name="annee" required>{yearRanges.map(y=><option key={y} value={y}>{y}</option>)}</select>
+                  <select name="prefix" required>{ALLOWED_PREFIXES.map(p=><option key={p} value={p}>{p}</option>)}</select>
+                  <input name="num" type="number" min={1} placeholder="Numéro" required />
+                  <button type="submit" className="bg-blue-900 text-white px-2 py-1 rounded">➕</button>
+                </form>
+              </td>
+              <td className="border px-2 py-1">
+                <select value={u.role} onChange={e=>changeRole(u.id,e.target.value)}>
+                  {ROLE_OPTIONS.map(r=><option key={r} value={r}>{r}</option>)}
+                </select>
+              </td>
+              <td className="border px-2 py-1 flex gap-1">
+                {editingUserId === u.id ? (
+                  <>
+                    <button onClick={()=>saveUser(u.id)} className="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700">💾</button>
+                    <button onClick={()=>setEditingUserId(null)} className="bg-gray-400 text-white px-2 py-1 rounded hover:bg-gray-500">✖</button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={()=>{setEditingUserId(u.id); setEditValues({nom:u.nom, prenom:u.prenom, identifiant:u.identifiant ?? ""})}} className="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600">✏️</button>
+                    <button onClick={()=>deleteUser(u.id)} className="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">🗑</button>
+                  </>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

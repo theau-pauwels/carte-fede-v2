@@ -16,6 +16,7 @@ def login():
         data = request.get_json(silent=True) or {}
         email = (data.get("email") or "").strip().lower()
         password = (data.get("password") or "")
+        remember = bool(data.get("remember", True))
 
         user = None
         if email:
@@ -28,7 +29,7 @@ def login():
         if not user or not check_password_hash(user.password_hash, password):
             return jsonify({"error": "Invalid credentials"}), 401
 
-        login_user(user)
+        login_user(user, remember=remember)
         role_value = getattr(user.role, "value", user.role)
         return jsonify({"ok": True, "user": {
             "email": user.email or "",
@@ -98,7 +99,7 @@ def register():
             return jsonify({"error": "Un compte existe déjà avec cet email"}), 400
 
         # Connecte automatiquement après inscription
-        login_user(user)
+        login_user(user, remember=True)
 
         return jsonify({
             "ok": True,

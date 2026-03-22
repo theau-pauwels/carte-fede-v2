@@ -10,6 +10,7 @@ const isEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim(
 const LoginForm: React.FC<LoginFormProps> = ({ next = "/" }) => {
   const [ident, setIdent] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(true);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -23,7 +24,12 @@ const LoginForm: React.FC<LoginFormProps> = ({ next = "/" }) => {
       return;
     }
 
-    let payload: Record<string, string> = { password };
+    const payload: {
+      password: string;
+      remember: boolean;
+      email?: string;
+      identifiant?: string;
+    } = { password, remember };
     if (isEmail(trimmedIdent)) {
       payload.email = trimmedIdent.toLowerCase();
     } else if (isSixDigits(trimmedIdent)) {
@@ -130,6 +136,15 @@ const LoginForm: React.FC<LoginFormProps> = ({ next = "/" }) => {
           </button>
         </div>
 
+        <label className="remember-row">
+          <input
+            type="checkbox"
+            checked={remember}
+            onChange={(e) => setRemember(e.target.checked)}
+          />
+          <span>Se souvenir de moi</span>
+        </label>
+
         <button
           type="submit"
           disabled={isLoading}
@@ -147,6 +162,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ next = "/" }) => {
           {`
             .stack { display:flex; flex-direction:column; gap:.8rem; max-width:380px; }
             input, button { padding:.55rem .7rem; font-size:1rem; }
+            .remember-row { display:flex; align-items:center; gap:.5rem; font-size:.95rem; }
+            .remember-row input { width:auto; padding:0; }
           `}
         </style>
       </form>
