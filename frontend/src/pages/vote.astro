@@ -1,0 +1,19 @@
+---
+import Layout from "../layouts/Layout.astro";
+import RequireAuth from "@components/RequireAuth";
+import VotePortal from "../components/VotePortal";
+---
+
+<Layout title="Vote">
+  <main class="min-h-[calc(100vh-12rem)] bg-gradient-to-b from-slate-50 via-white to-blue-50/30 px-4 py-8 sm:px-6 lg:px-8">
+    <RequireAuth client:load>
+      <section class="mx-auto w-full max-w-6xl space-y-4">
+        <h1 class="text-3xl font-semibold text-blue-900">Vote</h1>
+        <p class="text-sm text-slate-600">
+          Rejoins une room via son code ou sélectionne une room accessible pour voter.
+        </p>
+        <VotePortal client:load />
+      </section>
+    </RequireAuth>
+  </main>
+</Layout>

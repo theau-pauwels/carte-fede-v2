@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from sqlalchemy.orm import joinedload
-from .models import db, User, Role, Membership, Room, VoteSession, VoteOption, VoteBallot
+from .models import db, User, Role, Membership, Room, VoteSession, VoteOption, VoteBallot, RoomAllowedMember
 from datetime import datetime, timedelta
 import re
 
@@ -19,6 +19,7 @@ def is_admin():
     return current_user.is_authenticated and current_user.role == Role.ADMIN
 
 def _room_to_dict(room: Room):
+    allowed_member_ids = sorted({row.member_id for row in (room.allowed_members or [])})
     return {
         "id": room.id,
         "title": room.title,
@@ -27,6 +28,8 @@ def _room_to_dict(room: Room):
         "created_at": room.created_at.isoformat() if room.created_at else None,
         "expires_at": room.expires_at.isoformat() if room.expires_at else None,
         "created_by": room.created_by,
+        "access_type": "restricted" if allowed_member_ids else "public",
+        "allowed_member_ids": allowed_member_ids,
     }
 
 def _session_to_dict(session: VoteSession):
@@ -106,6 +109,7 @@ def users_collection():
             "nom": u.nom,
             "prenom": u.prenom,
             "identifiant": (u.member_id or u.email),
+            "member_id": u.member_id,
             "role": (u.role.value if hasattr(u.role, "value") else str(u.role)), 
             "cartes": cartes,
         })
@@ -222,6 +226,8 @@ def admin_rooms_collection():
         title = str(data.get("title") or "").strip()
         duration = data.get("duration_minutes") or 30
         password = str(data.get("password") or "").strip() or None
+        access_type = str(data.get("access_type") or "public").strip().lower()
+        allowed_member_ids = data.get("allowed_member_ids") or []
 
         if not title:
             return jsonify({"error": "Titre requis"}), 400
@@ -232,6 +238,32 @@ def admin_rooms_collection():
             return jsonify({"error": "Durée invalide"}), 400
         if duration <= 0 or duration > 24 * 60:
             return jsonify({"error": "Durée invalide"}), 400
+        if access_type not in ("public", "restricted"):
+            return jsonify({"error": "access_type invalide"}), 400
+        if not isinstance(allowed_member_ids, list):
+            return jsonify({"error": "allowed_member_ids doit être une liste"}), 400
+
+        clean_member_ids = []
+        seen = set()
+        for raw in allowed_member_ids:
+            member_id = str(raw or "").strip()
+            if not re.match(r"^\d{6}$", member_id):
+                return jsonify({"error": f"Matricule invalide: {member_id}"}), 400
+            if member_id not in seen:
+                seen.add(member_id)
+                clean_member_ids.append(member_id)
+
+        if access_type == "restricted":
+            if not clean_member_ids:
+                return jsonify({"error": "Sélectionner au moins un matricule pour une room restreinte"}), 400
+            existing_member_ids = {
+                row[0]
+                for row in db.session.query(User.member_id).filter(User.member_id.in_(clean_member_ids)).all()
+                if row[0]
+            }
+            missing = [m for m in clean_member_ids if m not in existing_member_ids]
+            if missing:
+                return jsonify({"error": f"Matricules introuvables: {', '.join(missing)}"}), 400
 
         # Générer code unique
         code = None
@@ -256,11 +288,23 @@ def admin_rooms_collection():
             created_by=current_user.id,
         )
         db.session.add(room)
+        db.session.flush()
+
+        if access_type == "restricted":
+            for member_id in clean_member_ids:
+                db.session.add(RoomAllowedMember(room_id=room.id, member_id=member_id))
+
         db.session.commit()
         return jsonify(_room_to_dict(room)), 201
 
-    rooms = Room.query.order_by(Room.created_at.desc()).all()
-    return jsonify([_room_to_dict(r) for r in rooms])
+    rooms = Room.query.options(joinedload(Room.allowed_members)).order_by(Room.created_at.desc()).all()
+    result = []
+    for room in rooms:
+        room_data = _room_to_dict(room)
+        open_session = VoteSession.query.filter_by(room_id=room.id, status="open").first()
+        room_data["active_vote"] = _session_to_dict(open_session) if open_session else None
+        result.append(room_data)
+    return jsonify(result)
 
 @bp_admin.route("/api/admin/rooms/<room_id>", methods=["DELETE"])
 @login_required

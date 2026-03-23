@@ -57,6 +57,7 @@ class Room(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     expires_at = db.Column(db.DateTime, nullable=True)
     created_by = db.Column(db.String, db.ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
+    allowed_members = relationship("RoomAllowedMember", backref="room", cascade="all, delete-orphan")
 
     @staticmethod
     def generate_code(length=6):
@@ -95,4 +96,16 @@ class VoteBallot(db.Model):
 
     __table_args__ = (
         db.UniqueConstraint("session_id", "voter_token", name="uq_vote_once_per_session"),
+    )
+
+
+class RoomAllowedMember(db.Model):
+    __tablename__ = "room_allowed_member"
+    id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    room_id = db.Column(db.String, db.ForeignKey("room.id", ondelete="CASCADE"), nullable=False, index=True)
+    member_id = db.Column(db.String(6), nullable=False, index=True)
+
+    __table_args__ = (
+        db.UniqueConstraint("room_id", "member_id", name="uq_room_allowed_member"),
+        db.CheckConstraint("member_id ~ '^[0-9]{6}$'", name="room_allowed_member_id_six_digits"),
     )
