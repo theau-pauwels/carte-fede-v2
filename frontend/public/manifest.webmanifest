@@ -1,7 +1,7 @@
 {
-  "name": "Carte Fede FPMs",
-  "short_name": "Carte Fede",
-  "description": "Acces rapide a la carte fede FPMs depuis un ecran d'accueil mobile.",
+  "name": "Carte Fédé FPMs",
+  "short_name": "Carte Fédé",
+  "description": "Accès rapide à la carte Fédé FPMs depuis un écran d'accueil mobile.",
   "start_url": "/app/qr",
   "scope": "/",
   "display": "standalone",

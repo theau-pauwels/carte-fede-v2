@@ -1,8 +1,10 @@
 ---
-import NavMenu from "../components/Nav";
+import { navItems } from "./NavItems";
 ---
 
-<header class="sticky top-0 z-30 border-b border-slate-200 bg-white font-semibold text-blue-900 shadow-sm">
+<header
+  class="sticky top-0 z-30 border-b border-slate-200 bg-white font-semibold text-blue-900 shadow-sm"
+>
   <div class="container mx-auto px-4 pt-4">
     <a
       href="/"
@@ -45,9 +47,226 @@ import NavMenu from "../components/Nav";
           transform="translate(-168 -80)"></path>
       </svg>
       <div class="min-w-0">
-        <div class="truncate text-base leading-tight xs:text-lg sm:text-xl">Fédération des Étudiants FPMs</div>
+        <div class="truncate text-base leading-tight xs:text-lg sm:text-xl">
+          Fédération des Étudiants FPMs
+        </div>
       </div>
     </a>
   </div>
-  <NavMenu client:only="react" />
+  <nav class="container mx-auto px-4 pb-4" data-nav>
+    <div class="hidden items-center justify-between gap-6 lg:flex">
+      <ul class="flex flex-wrap gap-4 text-sm lg:text-base">
+        {
+          navItems.map((item) => (
+            <li
+              class:list={[
+                "inline-flex",
+                (item.adminOnly ||
+                  item.label === "Se connecter" ||
+                  item.label === "S'inscrire") &&
+                  "hidden",
+              ]}
+              data-admin-only={item.adminOnly ? "true" : undefined}
+              data-verifier-only={item.verifierOnly ? "true" : undefined}
+              data-auth-hidden={
+                item.label === "Se connecter" || item.label === "S'inscrire"
+                  ? "true"
+                  : undefined
+              }
+            >
+              <a
+                href={item.href}
+                class={
+                  item.label === "Site Fédé"
+                    ? "rounded-lg border-2 border-blue-900 bg-blue-900 px-4 py-2 text-white transition duration-150 hover:bg-blue-50 hover:text-blue-900"
+                    : "relative px-1 py-1 after:absolute after:bottom-0 after:left-0 after:h-[3px] after:w-0 after:rounded-full after:bg-blue-900 after:duration-500 hover:after:w-full"
+                }
+              >
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+
+      <div class="whitespace-nowrap text-right text-sm text-gray-700">
+        <span class="text-gray-500" data-user-label>Vérification...</span>
+        <div class="mt-2 hidden" data-logout-wrap>
+          <button
+            type="button"
+            data-logout
+            class="relative text-red-700 after:absolute after:bottom-0 after:left-0 after:h-[3px] after:w-0 after:rounded-full after:bg-red-700 after:duration-500 hover:after:w-full"
+          >
+            Se déconnecter
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="lg:hidden">
+      <div class="flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          <p
+            class="truncate text-xs font-medium uppercase tracking-[0.18em] text-blue-700"
+          >
+            Navigation
+          </p>
+          <p class="truncate text-sm text-slate-500" data-user-label>
+            Vérification...
+          </p>
+        </div>
+
+        <button
+          type="button"
+          data-mobile-toggle
+          aria-expanded="false"
+          aria-controls="mobile-nav-panel"
+          class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-blue-900 shadow-sm"
+        >
+          <span>Menu</span>
+          <span aria-hidden="true" class="text-lg leading-none" data-menu-icon>
+            ≡
+          </span>
+        </button>
+      </div>
+
+      <div
+        id="mobile-nav-panel"
+        data-mobile-panel
+        class="mt-3 hidden rounded-3xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-200/70 ring-1 ring-slate-100"
+      >
+        <ul class="space-y-2">
+          {
+            navItems.map((item) => (
+              <li
+                class:list={[
+                  (item.adminOnly ||
+                    item.label === "Se connecter" ||
+                    item.label === "S'inscrire") &&
+                    "hidden",
+                ]}
+                data-admin-only={item.adminOnly ? "true" : undefined}
+                data-verifier-only={item.verifierOnly ? "true" : undefined}
+                data-auth-hidden={
+                  item.label === "Se connecter" || item.label === "S'inscrire"
+                    ? "true"
+                    : undefined
+                }
+              >
+                <a
+                  href={item.href}
+                  class={
+                    item.label === "Site Fédé"
+                      ? "block rounded-2xl bg-blue-900 px-4 py-3 text-sm font-semibold text-white"
+                      : "block rounded-2xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                  }
+                >
+                  {item.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+
+        <div
+          class="mt-3 hidden border-t border-slate-100 pt-3"
+          data-logout-wrap
+        >
+          <button
+            type="button"
+            data-logout
+            class="block w-full rounded-2xl bg-rose-50 px-4 py-3 text-left text-sm font-semibold text-rose-700"
+          >
+            Se déconnecter
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
 </header>
+
+<script>
+  function initNav() {
+    const nav = document.querySelector<HTMLElement>("[data-nav]");
+    if (!nav || nav.dataset.navReady === "true") return;
+
+    nav.dataset.navReady = "true";
+
+    const userLabels = nav.querySelectorAll("[data-user-label]");
+    const logoutWraps = nav.querySelectorAll<HTMLElement>("[data-logout-wrap]");
+    const logoutButtons = nav.querySelectorAll("[data-logout]");
+    const mobileToggle = nav.querySelector<HTMLElement>("[data-mobile-toggle]");
+    const mobilePanel = nav.querySelector<HTMLElement>("[data-mobile-panel]");
+    const menuIcon = nav.querySelector("[data-menu-icon]");
+
+    const setMenuOpen = (open: boolean) => {
+      mobilePanel?.classList.toggle("hidden", !open);
+      mobileToggle?.setAttribute("aria-expanded", String(open));
+      if (menuIcon) menuIcon.textContent = open ? "x" : "≡";
+    };
+
+    const applyAuthState = (
+      me: { email?: string; identifiant?: string; role?: string } | null,
+    ) => {
+      const role = me?.role ?? "guest";
+      const userLabel = me
+        ? `Connecté : ${me.identifiant ?? me.email ?? "Utilisateur"} (${role})`
+        : "Non connecté";
+
+      userLabels.forEach((label) => {
+        label.textContent = userLabel;
+        label.classList.toggle("text-gray-500", !me);
+        label.classList.toggle("text-slate-500", !me);
+        label.classList.toggle("text-slate-700", Boolean(me));
+      });
+
+      nav.querySelectorAll<HTMLElement>("li").forEach((item) => {
+        const adminOnly = item.dataset.adminOnly === "true";
+        const verifierOnly = item.dataset.verifierOnly === "true";
+        const authHidden = item.dataset.authHidden === "true";
+
+        const canSeeAdminItem =
+          !adminOnly ||
+          role === "admin" ||
+          (verifierOnly && role === "verifier");
+        const shouldHide = !canSeeAdminItem || (Boolean(me) && authHidden);
+        item.classList.toggle("hidden", shouldHide);
+      });
+
+      logoutWraps.forEach((wrap) => wrap.classList.toggle("hidden", !me));
+    };
+
+    mobileToggle?.addEventListener("click", () => {
+      const isOpen = mobileToggle.getAttribute("aria-expanded") === "true";
+      setMenuOpen(!isOpen);
+    });
+
+    mobilePanel?.querySelectorAll("a").forEach((link) => {
+      link.addEventListener("click", () => setMenuOpen(false));
+    });
+
+    logoutButtons.forEach((button) => {
+      button.addEventListener("click", async () => {
+        const res = await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (!res.ok) console.error("Logout failed", res.status);
+        window.location.href = "/";
+      });
+    });
+
+    fetch("/api/me", { credentials: "include" })
+      .then(async (res) => (res.ok ? res.json() : null))
+      .then(applyAuthState)
+      .catch(() => applyAuthState(null));
+
+    window.addEventListener("resize", () => {
+      if (window.innerWidth >= 1024) setMenuOpen(false);
+    });
+  }
+
+  initNav();
+  document.addEventListener("astro:page-load", initNav);
+</script>

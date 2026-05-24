@@ -1,4 +1,4 @@
-const CACHE_VERSION = "carte-fede-v2";
+const CACHE_VERSION = "carte-fede-v3";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -42,6 +42,25 @@ self.addEventListener("fetch", (event) => {
 
   if (url.pathname.startsWith("/api/")) {
     event.respondWith(fetch(request));
+    return;
+  }
+
+  if (
+    url.pathname.startsWith("/_astro/") ||
+    request.destination === "script" ||
+    request.destination === "style"
+  ) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
     return;
   }
 

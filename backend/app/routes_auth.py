@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, session
 from flask_login import login_user, logout_user, login_required, current_user
 from .models import db, User, Role
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -41,11 +41,25 @@ def login():
         return jsonify({"error": "Server error"}), 500
 
 @bp_auth.route("/api/auth/logout", methods=["POST"])
-@login_required
 def logout():
-    print("Logout user:", current_user)
     logout_user()
-    return jsonify({"ok": True})
+    session.clear()
+
+    response = jsonify({"ok": True})
+    session_cookie = current_app.config.get("SESSION_COOKIE_NAME", "session")
+    remember_cookie = current_app.config.get("REMEMBER_COOKIE_NAME", "remember_token")
+
+    for cookie_name in (session_cookie, remember_cookie):
+        response.delete_cookie(
+            cookie_name,
+            path="/",
+            samesite=current_app.config.get("SESSION_COOKIE_SAMESITE", "Lax"),
+            secure=current_app.config.get("SESSION_COOKIE_SECURE", False),
+            httponly=True,
+        )
+        response.delete_cookie(cookie_name, path="/")
+
+    return response
 
 
 @bp_auth.route("/api/me", methods=["GET"])
@@ -161,10 +175,10 @@ def request_password_reset():
 
     body = (
         f"Bonjour {user.prenom or ''},\n\n"
-        "Une demande de reinitialisation de mot de passe a ete faite pour votre compte.\n"
+        "Une demande de réinitialisation de mot de passe a été effectuée pour votre compte.\n"
         f"Pour choisir un nouveau mot de passe, cliquez sur ce lien (valable {minutes} min):\n"
         f"{reset_url}\n\n"
-        "Si vous n'etes pas a l'origine de cette demande, ignorez cet email."
+        "Si vous n'êtes pas à l'origine de cette demande, ignorez cet email."
     )
 
     recipient = user.email or (
@@ -174,7 +188,7 @@ def request_password_reset():
         return jsonify({"ok": True})
 
     try:
-        send_email(recipient, "Reinitialisation de mot de passe", body)
+        send_email(recipient, "Réinitialisation de mot de passe", body)
     except Exception:
         current_app.logger.exception("Password reset email failed")
 

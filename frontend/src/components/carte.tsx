@@ -11,7 +11,8 @@ export default function Carte() {
       try {
         const r = await fetch("/api/me", { credentials: "include" });
         if (!r.ok) {
-          location.href = "/login?next=" + encodeURIComponent(location.pathname);
+          location.href =
+            "/login?next=" + encodeURIComponent(location.pathname);
           return;
         }
         const me = await r.json();
@@ -27,11 +28,17 @@ export default function Carte() {
     setMsg({ text: "" });
 
     const formData = new FormData(e.currentTarget);
-    const data = Object.fromEntries(formData.entries()) as Record<string, string>;
+    const data = Object.fromEntries(formData.entries()) as Record<
+      string,
+      string
+    >;
 
     // Validation member_id OU email
-    if (!(((data.member_id ?? "").match(/^\d{6}$/)) || data.email)) {
-      setMsg({ type: "err", text: "Fournir member_id (6 chiffres) OU email." });
+    if (!((data.member_id ?? "").match(/^\d{6}$/) || data.email)) {
+      setMsg({
+        type: "err",
+        text: "Fournis un identifiant à 6 chiffres ou un email.",
+      });
       return;
     }
 
@@ -87,7 +94,9 @@ export default function Carte() {
     <form id="create" onSubmit={handleSubmit} className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-slate-700">Identifiant (6 chiffres)</span>
+          <span className="mb-2 block text-sm font-medium text-slate-700">
+            Identifiant (6 chiffres)
+          </span>
           <input
             name="member_id"
             inputMode="numeric"
@@ -105,7 +114,9 @@ export default function Carte() {
         </div>
 
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-slate-700">Email</span>
+          <span className="mb-2 block text-sm font-medium text-slate-700">
+            Email
+          </span>
           <input
             name="email"
             type="email"
@@ -117,7 +128,9 @@ export default function Carte() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-slate-700">Mot de passe initial</span>
+          <span className="mb-2 block text-sm font-medium text-slate-700">
+            Mot de passe initial
+          </span>
           <div className="password-field">
             <input
               name="password"
@@ -133,7 +146,13 @@ export default function Carte() {
               aria-label="Afficher le mot de passe"
               aria-pressed="false"
             >
-              <svg className="icon-show" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <svg
+                className="icon-show"
+                viewBox="0 0 24 24"
+                width="20"
+                height="20"
+                aria-hidden="true"
+              >
                 <path
                   d="M1.5 12s3.5-6 10.5-6 10.5 6 10.5 6-3.5 6-10.5 6S1.5 12 1.5 12Z"
                   fill="none"
@@ -142,9 +161,22 @@ export default function Carte() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
-                <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="3"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                />
               </svg>
-              <svg className="icon-hide" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <svg
+                className="icon-hide"
+                viewBox="0 0 24 24"
+                width="20"
+                height="20"
+                aria-hidden="true"
+              >
                 <path
                   d="M3 3l18 18"
                   fill="none"
@@ -166,37 +198,45 @@ export default function Carte() {
         </label>
 
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-slate-700">Rôle</span>
+          <span className="mb-2 block text-sm font-medium text-slate-700">
+            Rôle
+          </span>
           <select
             name="role"
             required
             className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
           >
             <option value="en attente">En attente</option>
-            <option value="member">Member</option>
-            <option value="verifier">Verifier</option>
+            <option value="member">Membre</option>
+            <option value="verifier">Vérificateur</option>
             <option value="admin">Admin</option>
           </select>
         </label>
       </div>
 
       <fieldset className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-        <legend className="px-2 text-sm font-semibold text-slate-700">Carte a ajouter (optionnel)</legend>
+        <legend className="px-2 text-sm font-semibold text-slate-700">
+          Carte à ajouter (facultatif)
+        </legend>
         <div className="mt-2 grid gap-4 md:grid-cols-3">
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-700">Annee</span>
+            <span className="mb-2 block text-sm font-medium text-slate-700">
+              Année
+            </span>
             <select
               name="annee"
               className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             >
-              <option value="2025-2026">2025-2026</option>
               <option value="2026-2027">2026-2027</option>
               <option value="2027-2028">2027-2028</option>
+              <option value="2025-2026">2025-2026</option>
             </select>
           </label>
 
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-700">Prefixe</span>
+            <span className="mb-2 block text-sm font-medium text-slate-700">
+              Préfixe
+            </span>
             <select
               name="prefix"
               className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
@@ -211,7 +251,9 @@ export default function Carte() {
           </label>
 
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-700">Numero</span>
+            <span className="mb-2 block text-sm font-medium text-slate-700">
+              Numéro
+            </span>
             <input
               name="num"
               type="number"
@@ -228,7 +270,7 @@ export default function Carte() {
           type="submit"
           className="inline-flex items-center justify-center rounded-xl bg-blue-900 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-blue-800"
         >
-          Creer l'utilisateur
+          Créer l'utilisateur
         </button>
 
         {msg.text ? (

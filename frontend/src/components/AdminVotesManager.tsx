@@ -1,87 +1,114 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
-type AdminUser = {
-  id: string;
-  nom: string;
-  prenom: string;
-  member_id?: string | null;
+type QuestionType = "single" | "multiple" | "text" | "number";
+type FormStatus = "draft" | "open" | "closed";
+type AccessType = "public" | "code";
+
+type BuilderQuestion = {
+  title: string;
+  question_type: QuestionType;
+  required: boolean;
+  options: string[];
 };
 
-type VoteOption = { id: string; text: string };
-
-type VoteSession = {
+type FormOptionResult = {
   id: string;
-  question: string;
-  status: "open" | "closed";
-  options: VoteOption[];
+  text: string;
+  count: number;
 };
 
-type Room = {
+type FormResult = {
+  question_id: string;
+  question_type: QuestionType;
+  title: string;
+  total_answers: number;
+  options?: FormOptionResult[];
+  average?: number | null;
+  min?: number | null;
+  max?: number | null;
+  answers?: { text: string; respondent?: string | null }[];
+};
+
+type AdminForm = {
   id: string;
   title: string;
+  description: string;
   code: string;
-  password: string;
-  created_at?: string;
-  expires_at?: string;
-  access_type: "public" | "restricted";
-  allowed_member_ids: string[];
-  active_vote?: VoteSession | null;
+  access_type: AccessType;
+  status: FormStatus;
+  is_anonymous: boolean;
+  created_at?: string | null;
+  opened_at?: string | null;
+  closed_at?: string | null;
+  response_count: number;
+  active_count: number;
+  results: FormResult[];
 };
 
-function formatDate(value?: string) {
+const emptyQuestion = (): BuilderQuestion => ({
+  title: "",
+  question_type: "single",
+  required: true,
+  options: ["", ""],
+});
+
+function statusLabel(status: FormStatus) {
+  if (status === "open") return "Ouvert";
+  if (status === "closed") return "Clôturé";
+  return "Brouillon";
+}
+
+function formatDate(value?: string | null) {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString("fr-BE");
 }
 
+function questionTypeLabel(type: QuestionType) {
+  if (type === "single") return "Choix unique";
+  if (type === "multiple") return "Choix multiple";
+  if (type === "number") return "Nombre";
+  return "Texte libre";
+}
+
 export default function AdminVotesManager() {
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [rooms, setRooms] = useState<Room[]>([]);
+  const [forms, setForms] = useState<AdminForm[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   const [title, setTitle] = useState("");
-  const [durationMinutes, setDurationMinutes] = useState(60);
-  const [accessType, setAccessType] = useState<"public" | "restricted">("public");
-  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [description, setDescription] = useState("");
+  const [accessType, setAccessType] = useState<AccessType>("public");
+  const [isAnonymous, setIsAnonymous] = useState(true);
+  const [initialStatus, setInitialStatus] = useState<"draft" | "open">("draft");
+  const [questions, setQuestions] = useState<BuilderQuestion[]>([
+    emptyQuestion(),
+  ]);
 
-  const [voteQuestionByRoom, setVoteQuestionByRoom] = useState<Record<string, string>>({});
-  const [voteOptionsByRoom, setVoteOptionsByRoom] = useState<Record<string, string>>({});
-
-  const userChoices = useMemo(
-    () =>
-      users
-        .filter((u) => !!u.member_id)
-        .sort((a, b) => {
-          const nameA = `${a.nom} ${a.prenom}`.toLowerCase();
-          const nameB = `${b.nom} ${b.prenom}`.toLowerCase();
-          return nameA.localeCompare(nameB);
-        }),
-    [users]
+  const openForms = useMemo(
+    () => forms.filter((form) => form.status === "open").length,
+    [forms],
   );
 
-  const fetchRooms = async () => {
-    const res = await fetch("/api/admin/rooms", { credentials: "include" });
-    if (!res.ok) throw new Error("Impossible de charger les rooms");
+  const fetchForms = async () => {
+    const res = await fetch("/api/admin/forms", { credentials: "include" });
+    if (!res.ok) throw new Error("Impossible de charger les formulaires");
     const data = await res.json();
-    setRooms(data);
-  };
-
-  const fetchUsers = async () => {
-    const res = await fetch("/api/admin/users", { credentials: "include" });
-    if (!res.ok) throw new Error("Impossible de charger les utilisateurs");
-    const data = await res.json();
-    setUsers(data);
+    setForms(data);
   };
 
   useEffect(() => {
+    let cancelled = false;
+
     (async () => {
       try {
         setError("");
         const meRes = await fetch("/api/me", { credentials: "include" });
         if (!meRes.ok) {
-          window.location.href = "/login?next=" + encodeURIComponent(window.location.pathname);
+          window.location.href =
+            "/login?next=" + encodeURIComponent(window.location.pathname);
           return;
         }
         const me = await meRes.json();
@@ -89,41 +116,123 @@ export default function AdminVotesManager() {
           window.location.href = "/";
           return;
         }
-
-        await Promise.all([fetchUsers(), fetchRooms()]);
-      } catch (err: any) {
-        setError(err?.message || "Erreur lors du chargement");
+        await fetchForms();
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error ? err.message : "Erreur lors du chargement",
+          );
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
+
+    const timer = window.setInterval(() => {
+      fetchForms().catch(() => undefined);
+    }, 5000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
   }, []);
 
-  const toggleMember = (memberId: string) => {
-    setSelectedMemberIds((prev) =>
-      prev.includes(memberId) ? prev.filter((x) => x !== memberId) : [...prev, memberId]
+  const updateQuestion = (
+    index: number,
+    patch: Partial<BuilderQuestion>,
+  ) => {
+    setQuestions((prev) =>
+      prev.map((question, currentIndex) => {
+        if (currentIndex !== index) return question;
+        const next = { ...question, ...patch };
+        if (
+          patch.question_type &&
+          (patch.question_type === "text" || patch.question_type === "number")
+        ) {
+          next.options = [];
+        }
+        if (
+          patch.question_type &&
+          (patch.question_type === "single" ||
+            patch.question_type === "multiple") &&
+          next.options.length < 2
+        ) {
+          next.options = ["", ""];
+        }
+        return next;
+      }),
     );
   };
 
-  const createRoom = async (e: FormEvent) => {
-    e.preventDefault();
+  const updateOption = (
+    questionIndex: number,
+    optionIndex: number,
+    value: string,
+  ) => {
+    setQuestions((prev) =>
+      prev.map((question, currentIndex) => {
+        if (currentIndex !== questionIndex) return question;
+        return {
+          ...question,
+          options: question.options.map((option, currentOptionIndex) =>
+            currentOptionIndex === optionIndex ? value : option,
+          ),
+        };
+      }),
+    );
+  };
+
+  const addOption = (questionIndex: number) => {
+    setQuestions((prev) =>
+      prev.map((question, currentIndex) =>
+        currentIndex === questionIndex
+          ? { ...question, options: [...question.options, ""] }
+          : question,
+      ),
+    );
+  };
+
+  const removeOption = (questionIndex: number, optionIndex: number) => {
+    setQuestions((prev) =>
+      prev.map((question, currentIndex) => {
+        if (currentIndex !== questionIndex || question.options.length <= 2) {
+          return question;
+        }
+        return {
+          ...question,
+          options: question.options.filter((_, index) => index !== optionIndex),
+        };
+      }),
+    );
+  };
+
+  const createForm = async (event: FormEvent) => {
+    event.preventDefault();
     setError("");
+    setSaving(true);
+
+    const payload = {
+      title,
+      description,
+      access_type: accessType,
+      is_anonymous: isAnonymous,
+      status: initialStatus,
+      questions: questions.map((question) => ({
+        title: question.title,
+        question_type: question.question_type,
+        required: question.required,
+        options: question.options,
+      })),
+    };
 
     try {
-      const payload = {
-        title,
-        duration_minutes: durationMinutes,
-        access_type: accessType,
-        allowed_member_ids: accessType === "restricted" ? selectedMemberIds : [],
-      };
-
-      const res = await fetch("/api/admin/rooms", {
+      const res = await fetch("/api/admin/forms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(payload),
       });
-
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data.error || `Erreur ${res.status}`);
@@ -131,264 +240,454 @@ export default function AdminVotesManager() {
       }
 
       setTitle("");
-      setDurationMinutes(60);
+      setDescription("");
       setAccessType("public");
-      setSelectedMemberIds([]);
-      await fetchRooms();
+      setIsAnonymous(true);
+      setInitialStatus("draft");
+      setQuestions([emptyQuestion()]);
+      await fetchForms();
     } catch {
-      setError("Erreur réseau lors de la création de room");
+      setError("Erreur réseau lors de la création du formulaire");
+    } finally {
+      setSaving(false);
     }
   };
 
-  const deleteRoom = async (roomId: string) => {
-    if (!confirm("Supprimer cette room ?")) return;
-
-    const res = await fetch(`/api/admin/rooms/${roomId}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
-    if (!res.ok) {
-      alert("Impossible de supprimer la room");
-      return;
-    }
-    await fetchRooms();
-  };
-
-  const extendRoom = async (roomId: string, minutes: number) => {
-    const res = await fetch(`/api/admin/rooms/${roomId}/extend`, {
+  const updateStatus = async (formId: string, status: FormStatus) => {
+    const res = await fetch(`/api/admin/forms/${formId}/status`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ minutes }),
+      body: JSON.stringify({ status }),
     });
-    if (!res.ok) {
-      alert("Impossible d'étendre la room");
-      return;
-    }
-    await fetchRooms();
-  };
-
-  const createVote = async (roomId: string) => {
-    const question = (voteQuestionByRoom[roomId] || "").trim();
-    const optionsRaw = voteOptionsByRoom[roomId] || "";
-    const options = optionsRaw
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean);
-
-    if (!question || options.length < 2) {
-      alert("Ajoute une question et au moins 2 options (une par ligne).");
-      return;
-    }
-
-    const res = await fetch(`/api/admin/rooms/${roomId}/vote`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ question, options }),
-    });
-
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       alert(data.error || `Erreur ${res.status}`);
       return;
     }
-
-    setVoteQuestionByRoom((prev) => ({ ...prev, [roomId]: "" }));
-    setVoteOptionsByRoom((prev) => ({ ...prev, [roomId]: "" }));
-    await fetchRooms();
+    await fetchForms();
   };
 
-  const closeVote = async (roomId: string, sessionId: string) => {
-    const res = await fetch(`/api/admin/rooms/${roomId}/vote/${sessionId}/close`, {
-      method: "PUT",
+  const deleteForm = async (formId: string) => {
+    if (!confirm("Supprimer définitivement ce formulaire ?")) return;
+
+    const res = await fetch(`/api/admin/forms/${formId}`, {
+      method: "DELETE",
       credentials: "include",
     });
     if (!res.ok) {
-      alert("Impossible de fermer le vote");
+      alert("Impossible de supprimer le formulaire");
       return;
     }
-    await fetchRooms();
+    await fetchForms();
   };
 
   if (loading) return <p>Chargement...</p>;
 
   return (
-    <div className="w-full space-y-5">
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-        <h2 className="mb-3 text-xl font-semibold text-blue-900">Créer une room de vote</h2>
+    <div className="grid gap-5 xl:grid-cols-[minmax(340px,0.9fr)_1.4fr]">
+      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold text-blue-900">
+              Créer un formulaire de vote
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {forms.length} formulaire{forms.length > 1 ? "s" : ""} dont{" "}
+              {openForms} ouvert{openForms > 1 ? "s" : ""}
+            </p>
+          </div>
+        </div>
 
-        <form onSubmit={createRoom} className="grid gap-3">
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Titre de la room"
-            className="w-full rounded-xl border border-slate-300 px-3 py-2"
-            required
-          />
+        {error ? (
+          <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </p>
+        ) : null}
+
+        <form onSubmit={createForm} className="space-y-4">
+          <label className="grid gap-1 text-sm font-medium text-slate-700">
+            Titre
+            <input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Assemblée générale, sondage, vote..."
+              className="rounded-lg border border-slate-300 px-3 py-2 font-normal"
+              required
+            />
+          </label>
+
+          <label className="grid gap-1 text-sm font-medium text-slate-700">
+            Description
+            <textarea
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Contexte visible par les votants"
+              className="min-h-20 rounded-lg border border-slate-300 px-3 py-2 font-normal"
+            />
+          </label>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1 text-sm">
-              <span>Durée (minutes)</span>
-              <input
-                type="number"
-                min={1}
-                max={1440}
-                value={durationMinutes}
-                onChange={(e) => setDurationMinutes(parseInt(e.target.value || "0", 10) || 0)}
-                className="rounded-xl border border-slate-300 px-3 py-2"
-                required
-              />
-            </label>
-
-            <label className="grid gap-1 text-sm">
-              <span>Accès</span>
+            <label className="grid gap-1 text-sm font-medium text-slate-700">
+              Accès
               <select
                 value={accessType}
-                onChange={(e) => setAccessType(e.target.value as "public" | "restricted")}
-                className="rounded-xl border border-slate-300 px-3 py-2"
+                onChange={(event) =>
+                  setAccessType(event.target.value as AccessType)
+                }
+                className="rounded-lg border border-slate-300 px-3 py-2 font-normal"
               >
-                <option value="public">Public (tous les connectés)</option>
-                <option value="restricted">Restreint (matricules choisis)</option>
+                <option value="public">Public</option>
+                <option value="code">Avec code</option>
+              </select>
+            </label>
+
+            <label className="grid gap-1 text-sm font-medium text-slate-700">
+              Statut initial
+              <select
+                value={initialStatus}
+                onChange={(event) =>
+                  setInitialStatus(event.target.value as "draft" | "open")
+                }
+                className="rounded-lg border border-slate-300 px-3 py-2 font-normal"
+              >
+                <option value="draft">Brouillon</option>
+                <option value="open">Ouvert</option>
               </select>
             </label>
           </div>
 
-          {accessType === "restricted" ? (
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p className="mb-2 text-sm font-semibold text-slate-700">Matricules autorisés</p>
-              <div className="max-h-52 space-y-1 overflow-auto pr-1">
-                {userChoices.length ? (
-                  userChoices.map((u) => (
-                    <label key={u.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-white">
-                      <input
-                        type="checkbox"
-                        checked={selectedMemberIds.includes(u.member_id || "")}
-                        onChange={() => toggleMember(u.member_id || "")}
-                      />
-                      <span>
-                        {u.nom} {u.prenom} ({u.member_id})
-                      </span>
-                    </label>
-                  ))
-                ) : (
-                  <p className="text-sm text-slate-500">Aucun utilisateur avec matricule.</p>
-                )}
-              </div>
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <input
+              type="checkbox"
+              checked={isAnonymous}
+              onChange={(event) => setIsAnonymous(event.target.checked)}
+              className="h-4 w-4"
+            />
+            Vote anonyme
+          </label>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-base font-semibold text-slate-900">
+                Questions
+              </h3>
+              <button
+                type="button"
+                onClick={() => setQuestions((prev) => [...prev, emptyQuestion()])}
+                className="rounded-lg border border-blue-900 px-3 py-2 text-sm font-semibold text-blue-900 hover:bg-blue-50"
+              >
+                Ajouter une question
+              </button>
             </div>
-          ) : null}
 
-          <div>
-            <button
-              type="submit"
-              className="rounded-xl bg-blue-900 px-4 py-2 font-semibold text-white hover:bg-blue-800"
-            >
-              Créer la room
-            </button>
+            {questions.map((question, questionIndex) => (
+              <div
+                key={questionIndex}
+                className="rounded-lg border border-slate-200 bg-slate-50 p-3"
+              >
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-semibold text-slate-800">
+                    Question {questionIndex + 1}
+                  </p>
+                  {questions.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setQuestions((prev) =>
+                          prev.filter((_, index) => index !== questionIndex),
+                        )
+                      }
+                      className="text-sm font-semibold text-red-700 hover:underline"
+                    >
+                      Supprimer
+                    </button>
+                  ) : null}
+                </div>
+
+                <label className="mb-3 grid gap-1 text-sm font-medium text-slate-700">
+                  Intitulé
+                  <input
+                    value={question.title}
+                    onChange={(event) =>
+                      updateQuestion(questionIndex, { title: event.target.value })
+                    }
+                    placeholder="Votre question"
+                    className="rounded-lg border border-slate-300 px-3 py-2 font-normal"
+                    required
+                  />
+                </label>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="grid gap-1 text-sm font-medium text-slate-700">
+                    Type
+                    <select
+                      value={question.question_type}
+                      onChange={(event) =>
+                        updateQuestion(questionIndex, {
+                          question_type: event.target.value as QuestionType,
+                        })
+                      }
+                      className="rounded-lg border border-slate-300 px-3 py-2 font-normal"
+                    >
+                      <option value="single">Choix unique</option>
+                      <option value="multiple">Choix multiple</option>
+                      <option value="text">Texte libre</option>
+                      <option value="number">Nombre</option>
+                    </select>
+                  </label>
+
+                  <label className="flex items-end gap-2 pb-2 text-sm font-medium text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={question.required}
+                      onChange={(event) =>
+                        updateQuestion(questionIndex, {
+                          required: event.target.checked,
+                        })
+                      }
+                      className="h-4 w-4"
+                    />
+                    Réponse obligatoire
+                  </label>
+                </div>
+
+                {question.question_type === "single" ||
+                question.question_type === "multiple" ? (
+                  <div className="mt-3 space-y-2">
+                    {question.options.map((option, optionIndex) => (
+                      <div key={optionIndex} className="flex gap-2">
+                        <input
+                          value={option}
+                          onChange={(event) =>
+                            updateOption(
+                              questionIndex,
+                              optionIndex,
+                              event.target.value,
+                            )
+                          }
+                          placeholder={`Option ${optionIndex + 1}`}
+                          className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeOption(questionIndex, optionIndex)}
+                          disabled={question.options.length <= 2}
+                          className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          Retirer
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => addOption(questionIndex)}
+                      className="text-sm font-semibold text-blue-900 hover:underline"
+                    >
+                      Ajouter une option
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ))}
           </div>
-        </form>
 
-        {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
+          <button
+            type="submit"
+            disabled={saving}
+            className="w-full rounded-lg bg-blue-900 px-4 py-3 font-semibold text-white hover:bg-blue-800 disabled:cursor-wait disabled:opacity-70"
+          >
+            {saving ? "Création..." : "Créer le formulaire"}
+          </button>
+        </form>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-xl font-semibold text-blue-900">Rooms</h2>
-
-        {rooms.length ? (
-          rooms.map((room) => (
-            <article key={room.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="space-y-4">
+        {forms.length ? (
+          forms.map((form) => (
+            <article
+              key={form.id}
+              className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+            >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900">{room.title}</h3>
-                  <p className="text-sm text-slate-600">Code: <strong>{room.code}</strong></p>
-                  <p className="text-sm text-slate-600">Mot de passe: <strong>{room.password}</strong></p>
-                  <p className="text-sm text-slate-600">Expire: {formatDate(room.expires_at)}</p>
-                  <p className="text-sm text-slate-600">
-                    Accès: {room.access_type === "public" ? "Public" : `Restreint (${room.allowed_member_ids.length} matricules)`}
-                  </p>
+                  <h2 className="text-xl font-semibold text-blue-900">
+                    {form.title}
+                  </h2>
+                  {form.description ? (
+                    <p className="mt-1 text-sm text-slate-600">
+                      {form.description}
+                    </p>
+                  ) : null}
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700">
+                      {statusLabel(form.status)}
+                    </span>
+                    <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-900">
+                      {form.is_anonymous ? "Anonyme" : "Nominatif"}
+                    </span>
+                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-800">
+                      {form.access_type === "code"
+                        ? `Code ${form.code}`
+                        : "Public"}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
+                  {form.status !== "open" && form.status !== "closed" ? (
+                    <button
+                      type="button"
+                      onClick={() => updateStatus(form.id, "open")}
+                      className="rounded-lg bg-blue-900 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-800"
+                    >
+                      Ouvrir
+                    </button>
+                  ) : null}
+                  {form.status !== "closed" ? (
+                    <button
+                      type="button"
+                      onClick={() => updateStatus(form.id, "closed")}
+                      className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                    >
+                      Clôturer
+                    </button>
+                  ) : null}
+                  {form.status !== "draft" && form.status !== "closed" ? (
+                    <button
+                      type="button"
+                      onClick={() => updateStatus(form.id, "draft")}
+                      className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                    >
+                      Brouillon
+                    </button>
+                  ) : null}
                   <button
                     type="button"
-                    onClick={() => extendRoom(room.id, 30)}
-                    className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200"
-                  >
-                    +30 min
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => deleteRoom(room.id)}
-                    className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                    onClick={() => deleteForm(form.id)}
+                    className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
                   >
                     Supprimer
                   </button>
                 </div>
               </div>
 
-              {room.access_type === "restricted" ? (
-                <p className="mt-2 text-xs text-slate-500">
-                  Matricules autorisés: {room.allowed_member_ids.join(", ")}
-                </p>
-              ) : null}
-
-              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <p className="mb-2 text-sm font-semibold text-slate-700">Lancer un vote</p>
-                <div className="grid gap-2">
-                  <input
-                    value={voteQuestionByRoom[room.id] || ""}
-                    onChange={(e) =>
-                      setVoteQuestionByRoom((prev) => ({ ...prev, [room.id]: e.target.value }))
-                    }
-                    placeholder="Question du vote"
-                    className="rounded-lg border border-slate-300 px-3 py-2"
-                  />
-                  <textarea
-                    value={voteOptionsByRoom[room.id] || ""}
-                    onChange={(e) =>
-                      setVoteOptionsByRoom((prev) => ({ ...prev, [room.id]: e.target.value }))
-                    }
-                    placeholder={"Une option par ligne\nOui\nNon\nAbstention"}
-                    rows={4}
-                    className="rounded-lg border border-slate-300 px-3 py-2"
-                  />
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => createVote(room.id)}
-                      className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-                    >
-                      Ouvrir le vote
-                    </button>
-                  </div>
+              <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-4">
+                <div className="rounded-lg bg-slate-50 p-3">
+                  <dt className="text-slate-500">Réponses</dt>
+                  <dd className="text-lg font-semibold text-slate-900">
+                    {form.response_count}
+                  </dd>
                 </div>
+                <div className="rounded-lg bg-slate-50 p-3">
+                  <dt className="text-slate-500">Dans la room</dt>
+                  <dd className="text-lg font-semibold text-slate-900">
+                    {form.active_count}
+                  </dd>
+                </div>
+                <div className="rounded-lg bg-slate-50 p-3">
+                  <dt className="text-slate-500">Ouverture</dt>
+                  <dd className="font-semibold text-slate-900">
+                    {formatDate(form.opened_at)}
+                  </dd>
+                </div>
+                <div className="rounded-lg bg-slate-50 p-3">
+                  <dt className="text-slate-500">Clôture</dt>
+                  <dd className="font-semibold text-slate-900">
+                    {formatDate(form.closed_at)}
+                  </dd>
+                </div>
+              </dl>
 
-                {room.active_vote ? (
-                  <div className="mt-3 rounded-lg bg-white p-3">
-                    <p className="text-sm font-semibold text-slate-800">Vote actif: {room.active_vote.question}</p>
-                    <ul className="mt-1 list-disc pl-5 text-sm text-slate-600">
-                      {room.active_vote.options.map((option) => (
-                        <li key={option.id}>{option.text}</li>
-                      ))}
-                    </ul>
-                    <button
-                      type="button"
-                      onClick={() => closeVote(room.id, room.active_vote!.id)}
-                      className="mt-2 rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-600"
-                    >
-                      Fermer le vote actif
-                    </button>
+              <div className="mt-4 space-y-3">
+                {form.results.map((result) => (
+                  <div
+                    key={result.question_id}
+                    className="rounded-lg border border-slate-200 p-3"
+                  >
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="font-semibold text-slate-900">
+                        {result.title}
+                      </h3>
+                      <span className="text-xs font-semibold uppercase text-slate-500">
+                        {questionTypeLabel(result.question_type)}
+                      </span>
+                    </div>
+
+                    {result.options ? (
+                      <div className="space-y-2">
+                        {result.options.map((option) => {
+                          const percent = result.total_answers
+                            ? Math.round((option.count / result.total_answers) * 100)
+                            : 0;
+                          return (
+                            <div key={option.id}>
+                              <div className="mb-1 flex justify-between gap-3 text-sm">
+                                <span>{option.text}</span>
+                                <span className="font-semibold">
+                                  {option.count} ({percent}%)
+                                </span>
+                              </div>
+                              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                                <div
+                                  className="h-full bg-blue-900"
+                                  style={{ width: `${percent}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+
+                    {result.question_type === "number" ? (
+                      <div className="grid gap-2 text-sm sm:grid-cols-4">
+                        <p>Total : {result.total_answers}</p>
+                        <p>
+                          Moyenne :{" "}
+                          {result.average === null ||
+                          result.average === undefined
+                            ? "-"
+                            : result.average.toFixed(2)}
+                        </p>
+                        <p>Min : {result.min ?? "-"}</p>
+                        <p>Max : {result.max ?? "-"}</p>
+                      </div>
+                    ) : null}
+
+                    {result.answers ? (
+                      <div className="space-y-2">
+                        {result.answers.length ? (
+                          result.answers.map((answer, index) => (
+                            <p
+                              key={`${result.question_id}-${index}`}
+                              className="rounded-lg bg-slate-50 px-3 py-2 text-sm"
+                            >
+                              {answer.respondent ? (
+                                <span className="font-semibold">
+                                  {answer.respondent} :{" "}
+                                </span>
+                              ) : null}
+                              {answer.text}
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-sm text-slate-500">
+                            Aucune réponse.
+                          </p>
+                        )}
+                      </div>
+                    ) : null}
                   </div>
-                ) : (
-                  <p className="mt-2 text-sm text-slate-500">Aucun vote actif.</p>
-                )}
+                ))}
               </div>
             </article>
           ))
         ) : (
-          <p className="rounded-xl border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">
-            Aucune room pour l'instant.
-          </p>
+          <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-sm">
+            Aucun formulaire créé.
+          </div>
         )}
       </section>
     </div>

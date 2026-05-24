@@ -52,9 +52,9 @@ def _can_access_room(room: Room) -> bool:
 def _get_active_room_by_id(room_id: str):
     room = Room.query.filter_by(id=room_id).first()
     if not room:
-        return None, (jsonify({"error": "Room introuvable"}), 404)
+        return None, (jsonify({"error": "Salle introuvable"}), 404)
     if _room_is_expired(room):
-        return None, (jsonify({"error": "Room expirée"}), 410)
+        return None, (jsonify({"error": "Salle expirée"}), 410)
     if not _can_access_room(room):
         return None, (jsonify({"error": "Accès refusé"}), 403)
     return room, None
@@ -63,9 +63,9 @@ def _get_active_room_by_id(room_id: str):
 def _get_active_room_by_code(code: str):
     room = Room.query.filter_by(code=code.upper()).first()
     if not room:
-        return None, (jsonify({"error": "Room introuvable"}), 404)
+        return None, (jsonify({"error": "Salle introuvable"}), 404)
     if _room_is_expired(room):
-        return None, (jsonify({"error": "Room expirée"}), 410)
+        return None, (jsonify({"error": "Salle expirée"}), 410)
     if not _can_access_room(room):
         return None, (jsonify({"error": "Accès refusé"}), 403)
     return room, None

@@ -47,7 +47,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Carte Fede" />
+    <meta name="apple-mobile-web-app-title" content="Carte Fédé" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
@@ -116,7 +116,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
       <span aria-hidden="true">+</span>
       Installer l'app
     </button>
-    <script src="/pwa-register.js" defer></script>
+    <script src="/pwa-register.js" defer is:inline></script>
     <script is:inline>
       let deferredInstallPrompt = null;
 
@@ -166,7 +166,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
 
         if (isIos) {
           window.alert(
-            "Sur iPhone: ouvre le menu Partager dans Safari, puis choisis 'Sur l'ecran d'accueil'."
+            "Sur iPhone : ouvre le menu Partager dans Safari, puis choisis 'Sur l'écran d'accueil'.",
           );
         }
       });
@@ -182,7 +182,10 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site)
         const reveal = input.type === "password";
         input.type = reveal ? "text" : "password";
         button.setAttribute("aria-pressed", reveal ? "true" : "false");
-        button.setAttribute("aria-label", reveal ? "Masquer le mot de passe" : "Afficher le mot de passe");
+        button.setAttribute(
+          "aria-label",
+          reveal ? "Masquer le mot de passe" : "Afficher le mot de passe",
+        );
       });
     </script>
   </body>

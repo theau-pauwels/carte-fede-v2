@@ -7,6 +7,7 @@ from .routes_auth import bp_auth
 from .routes_admin import bp_admin
 from .routes_memberships import bp_mem
 from .routes_rooms import bp_rooms
+from .routes_forms import bp_forms
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 def create_app():
@@ -58,6 +59,7 @@ def create_app():
     app.register_blueprint(bp_admin)
     app.register_blueprint(bp_mem)
     app.register_blueprint(bp_rooms)
+    app.register_blueprint(bp_forms)
 
     # Auto-create tables only when explicitly enabled (avoid touching existing DBs)
     if os.getenv("AUTO_CREATE_DB", "").lower() in ("1", "true", "yes"):

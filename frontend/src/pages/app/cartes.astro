@@ -1,37 +1,76 @@
 ---
+
 ---
+
 <html lang="fr">
   <head>
-    <meta charset="utf-8"/><title>Mes cartes</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta charset="utf-8" /><title>Mes cartes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
-      body{font-family:system-ui;margin:2rem}
-      table{border-collapse:collapse}
-      th,td{border:1px solid #ddd;padding:.5rem .7rem}
-      th{background:#f6f6f7}
+      body {
+        margin: 2rem;
+        font-family: system-ui;
+      }
+      table {
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 0.5rem 0.7rem;
+      }
+      th {
+        background: #f6f6f7;
+      }
     </style>
   </head>
   <body>
     <h1>Mes cartes</h1>
     <table id="tbl">
-      <thead><tr><th>Année</th><th>Id de l'année</th></tr></thead>
+      <thead>
+        <tr><th>Année</th><th>Id de l'année</th></tr>
+      </thead>
       <tbody></tbody>
     </table>
     <script>
       (async () => {
-        const r = await fetch('/api/me', { credentials:'include' });
-        if (!r.ok) return location.href = '/login?next=' + encodeURIComponent(location.pathname);
+        const r = await fetch("/api/me", { credentials: "include" });
+        if (!r.ok) {
+          location.href =
+            "/login?next=" + encodeURIComponent(location.pathname);
+          return;
+        }
 
-        const res = await fetch('/api/memberships', { credentials:'include' });
-        const tb = document.querySelector('#tbl tbody');
-        if (!res.ok) { tb.innerHTML = `<tr><td colspan="2">Erreur ${res.status}</td></tr>`; return; }
-        const data = await res.json();
-        if (!data.length) { tb.innerHTML = `<tr><td colspan="2">Aucune carte pour le moment</td></tr>`; return; }
-        data.sort((a,b)=>b.annee-a.annee);
-        tb.innerHTML = data.map(x => {
-          const label = `${x.annee}-${x.annee+1}`;  // transforme 2025 en "2025-2026"
-          return `<tr><td>${label}</td><td>${x.annee_code ?? ''}</td></tr>`;
-        }).join('');
+        const res = await fetch("/api/memberships", {
+          credentials: "include",
+        });
+        const tb =
+          document.querySelector<HTMLTableSectionElement>("#tbl tbody");
+        if (!tb) return;
+
+        if (!res.ok) {
+          tb.innerHTML = `<tr><td colspan="2">Erreur ${res.status}</td></tr>`;
+          return;
+        }
+
+        type Membership = {
+          annee: number;
+          annee_code?: string | null;
+        };
+
+        const data = (await res.json()) as Membership[];
+        if (!data.length) {
+          tb.innerHTML = `<tr><td colspan="2">Aucune carte pour le moment</td></tr>`;
+          return;
+        }
+
+        data.sort((a, b) => b.annee - a.annee);
+        tb.innerHTML = data
+          .map((x) => {
+            const label = `${x.annee}-${x.annee + 1}`;
+            return `<tr><td>${label}</td><td>${x.annee_code ?? ""}</td></tr>`;
+          })
+          .join("");
       })();
     </script>
   </body>

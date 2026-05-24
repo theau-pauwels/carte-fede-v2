@@ -20,7 +20,8 @@ export default function AppQr() {
       try {
         const me = await fetch("/api/me", { credentials: "include" });
         if (!me.ok) {
-          window.location.href = "/login?next=" + encodeURIComponent(window.location.pathname);
+          window.location.href =
+            "/login?next=" + encodeURIComponent(window.location.pathname);
           return;
         }
 
@@ -55,13 +56,17 @@ export default function AppQr() {
   };
 
   if (loading) {
-    return <p className="mx-auto max-w-5xl p-8 text-slate-500">Chargement du QR...</p>;
+    return (
+      <p className="mx-auto max-w-5xl p-8 text-slate-500">
+        Chargement du QR...
+      </p>
+    );
   }
 
   if (!memberships.length) {
     return (
       <section className="mx-auto mt-8 w-full max-w-5xl rounded-3xl border border-slate-200 bg-white p-8 text-slate-500 shadow-sm">
-        Aucune carte active: impossible de générer un QR.
+        Aucune carte active : impossible de générer un QR.
       </section>
     );
   }
@@ -70,20 +75,27 @@ export default function AppQr() {
     <section className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-5 sm:px-8 sm:py-8">
       <header className="grid gap-4 rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm md:grid-cols-[1fr_auto] md:items-center sm:p-8">
         <div>
-          <h1 className="text-4xl font-black tracking-tight text-slate-900">Mon QR - Carte Fede</h1>
+          <h1 className="text-4xl font-black tracking-tight text-slate-900">
+            Mon QR - Carte Fédé
+          </h1>
           <p className="mt-2 max-w-2xl text-base leading-relaxed text-slate-500">
-            Présentez ce QR code pour prouver votre adhésion lors des contrôles. Sélectionnez une période pour générer automatiquement le QR correspondant.
+            Présentez ce QR code pour prouver votre adhésion lors des contrôles.
+            Sélectionnez une période pour générer automatiquement le QR
+            correspondant.
           </p>
         </div>
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
-          Identifiant associe: {selectedMembership?.annee_code ?? "-"}
+          Identifiant associé : {selectedMembership?.annee_code ?? "-"}
         </div>
       </header>
 
       <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
         <aside className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <label htmlFor="period" className="text-sm font-semibold text-slate-600">
-            Selectionne la periode:
+          <label
+            htmlFor="period"
+            className="text-sm font-semibold text-slate-600"
+          >
+            Sélectionne la période :
           </label>
           <select
             id="period"
@@ -107,12 +119,14 @@ export default function AppQr() {
             onClick={regenerate}
             className="mt-4 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-indigo-500 px-5 py-2 text-sm font-bold text-white transition hover:from-blue-700 hover:to-indigo-600"
           >
-            Regenerer le QR
+            Régénérer le QR
           </button>
         </aside>
 
         <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-center text-xs font-semibold uppercase tracking-[0.3em] text-blue-400">QR securise</p>
+          <p className="text-center text-xs font-semibold uppercase tracking-[0.3em] text-blue-400">
+            QR sécurisé
+          </p>
           <h2 className="mt-1 text-center text-3xl font-black text-slate-900">
             {selectedYear ? formatAcademicYear(selectedYear) : "-"}
           </h2>
@@ -120,7 +134,11 @@ export default function AppQr() {
           <div className="mx-auto mt-6 w-fit rounded-3xl border border-slate-200 bg-slate-50 p-5">
             <img
               src={qrSrc}
-              alt={selectedYear ? `QR carte ${formatAcademicYear(selectedYear)}` : "QR carte"}
+              alt={
+                selectedYear
+                  ? `QR carte ${formatAcademicYear(selectedYear)}`
+                  : "QR carte"
+              }
               className="h-64 w-64 rounded-lg bg-white object-contain"
             />
           </div>

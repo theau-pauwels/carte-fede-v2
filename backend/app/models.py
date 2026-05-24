@@ -109,3 +109,83 @@ class RoomAllowedMember(db.Model):
         db.UniqueConstraint("room_id", "member_id", name="uq_room_allowed_member"),
         db.CheckConstraint("member_id ~ '^[0-9]{6}$'", name="room_allowed_member_id_six_digits"),
     )
+
+
+class Form(db.Model):
+    __tablename__ = "form"
+    id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    title = db.Column(db.String, nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    code = db.Column(db.String(12), unique=True, nullable=False, index=True)
+    access_type = db.Column(db.String, nullable=False, default="public")  # public | code
+    status = db.Column(db.String, nullable=False, default="draft")  # draft | open | closed
+    is_anonymous = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    opened_at = db.Column(db.DateTime, nullable=True)
+    closed_at = db.Column(db.DateTime, nullable=True)
+    created_by = db.Column(db.String, db.ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
+
+    questions = relationship("FormQuestion", backref="form", cascade="all, delete-orphan")
+    responses = relationship("FormResponse", backref="form", cascade="all, delete-orphan")
+
+    @staticmethod
+    def generate_code(length=6):
+        alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+        return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+class FormQuestion(db.Model):
+    __tablename__ = "form_question"
+    id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    form_id = db.Column(db.String, db.ForeignKey("form.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = db.Column(db.String, nullable=False)
+    question_type = db.Column(db.String, nullable=False)  # single | multiple | text | number
+    required = db.Column(db.Boolean, nullable=False, default=True)
+    position = db.Column(db.Integer, nullable=False, default=0)
+
+    options = relationship("FormOption", backref="question", cascade="all, delete-orphan")
+
+
+class FormOption(db.Model):
+    __tablename__ = "form_option"
+    id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    question_id = db.Column(db.String, db.ForeignKey("form_question.id", ondelete="CASCADE"), nullable=False, index=True)
+    text = db.Column(db.String, nullable=False)
+    position = db.Column(db.Integer, nullable=False, default=0)
+
+
+class FormResponse(db.Model):
+    __tablename__ = "form_response"
+    id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    form_id = db.Column(db.String, db.ForeignKey("form.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = db.Column(db.String, db.ForeignKey("user.id", ondelete="SET NULL"), nullable=True, index=True)
+    voter_hash = db.Column(db.String, nullable=True, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User")
+    answers = relationship("FormAnswer", backref="response", cascade="all, delete-orphan")
+
+
+class FormAnswer(db.Model):
+    __tablename__ = "form_answer"
+    id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    response_id = db.Column(db.String, db.ForeignKey("form_response.id", ondelete="CASCADE"), nullable=False, index=True)
+    question_id = db.Column(db.String, db.ForeignKey("form_question.id", ondelete="CASCADE"), nullable=False, index=True)
+    option_id = db.Column(db.String, db.ForeignKey("form_option.id", ondelete="CASCADE"), nullable=True, index=True)
+    text_value = db.Column(db.Text, nullable=True)
+    number_value = db.Column(db.Float, nullable=True)
+
+    question = relationship("FormQuestion")
+    option = relationship("FormOption")
+
+
+class FormPresence(db.Model):
+    __tablename__ = "form_presence"
+    id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    form_id = db.Column(db.String, db.ForeignKey("form.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = db.Column(db.String, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
+    last_seen_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("form_id", "user_id", name="uq_form_presence_user"),
+    )

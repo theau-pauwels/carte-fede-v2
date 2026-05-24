@@ -9,7 +9,7 @@ import Mail from "@icons/Mail.astro";
   transition:animate="none"
 >
   <div
-    class="container mx-auto flex flex-col gap-4 px-4 py-8 md:grid md:grid-cols-[repeat(3,_1fr)_auto]"
+    class="container mx-auto flex flex-col gap-4 px-4 py-8 md:grid md:grid-cols-[repeat(3,_minmax(0,_1fr))_auto] md:items-start md:gap-8"
   >
     <div>
       <h4 class="mb-4 mt-0 font-semibold">Réseaux sociaux</h4>
@@ -55,17 +55,18 @@ import Mail from "@icons/Mail.astro";
     <div class="h-[2px] rounded-full bg-white md:hidden"></div>
 
     <div>
-      <h4 class="mb-4 mt-0 font-semibold">© Site développé par</h4>
+      <h4 class="mb-4 mt-0 font-semibold">Commission Web 188</h4>
       <ul class="flex flex-col gap-2">
         <li>Florian Lefebvre</li>
-        <li>Théau Pauwels</li>
+        <li>Martin Coghetto</li>
+        <li>Damien Callewaert</li>
         <li>
           <a
             class="inline-flex items-center gap-2 underline duration-150 hover:translate-x-2 hover:opacity-80"
             href="mailto:commission.web.fpms@gmail.com"
-            >
-              <Mail />
-              commission.web.fpms@gmail.com
+          >
+            <Mail />
+            commission.web.fpms@gmail.com
           </a>
         </li>
       </ul>
@@ -73,18 +74,25 @@ import Mail from "@icons/Mail.astro";
     <div class="h-[2px] rounded-full bg-white md:hidden"></div>
 
     <div>
-      <h4 class="mb-4 mt-0 font-semibold">Avec l'aide de </h4>
+      <h4 class="mb-4 mt-0 font-semibold">© Site développé par</h4>
       <ul class="flex flex-col gap-2">
-        <li>Kevin Dubrulle</li>
-        <li>Hugo Lorenzoni</li>
+        <li>Florian Lefebvre</li>
       </ul>
+
+      <div class="mt-5 border-t border-white/30 pt-4">
+        <h4 class="mb-4 mt-0 font-semibold">Avec l'aide de</h4>
+        <ul class="flex flex-col gap-2">
+          <li>Kevin Dubrulle</li>
+          <li>Hugo Lorenzoni</li>
+        </ul>
+      </div>
     </div>
     <div class="h-[2px] rounded-full bg-white md:hidden"></div>
 
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 1653 1846"
-      class="w-32"
+      class="w-32 md:justify-self-end"
     >
       <title>Blason Polytech</title>
       <path

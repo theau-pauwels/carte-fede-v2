@@ -57,7 +57,7 @@ def users_collection():
         if not nom or not prenom or not password:
             return jsonify({"error": "Champs requis: nom, prenom, password + (member_id OU email)"}), 400
         if not member_id and not email:
-            return jsonify({"error": "Fournir soit member_id (6 chiffres) soit email"}), 400
+            return jsonify({"error": "Fournir soit un identifiant à 6 chiffres, soit un email"}), 400
         if member_id and (len(member_id) != 6 or not member_id.isdigit()):
             return jsonify({"error": "member_id doit être 6 chiffres"}), 400
         if member_id and User.query.filter_by(member_id=member_id).first():
@@ -255,7 +255,7 @@ def admin_rooms_collection():
 
         if access_type == "restricted":
             if not clean_member_ids:
-                return jsonify({"error": "Sélectionner au moins un matricule pour une room restreinte"}), 400
+                return jsonify({"error": "Sélectionner au moins un matricule pour une salle restreinte"}), 400
             existing_member_ids = {
                 row[0]
                 for row in db.session.query(User.member_id).filter(User.member_id.in_(clean_member_ids)).all()
@@ -311,7 +311,7 @@ def admin_rooms_collection():
 def admin_delete_room(room_id):
     room = Room.query.get(room_id)
     if not room:
-        return jsonify({"error": "Room introuvable"}), 404
+        return jsonify({"error": "Salle introuvable"}), 404
     db.session.delete(room)
     db.session.commit()
     return jsonify({"ok": True})
@@ -330,7 +330,7 @@ def admin_extend_room(room_id):
 
     room = Room.query.get(room_id)
     if not room:
-        return jsonify({"error": "Room introuvable"}), 404
+        return jsonify({"error": "Salle introuvable"}), 404
 
     if room.expires_at is None:
         room.expires_at = datetime.utcnow() + timedelta(minutes=minutes)
@@ -357,7 +357,7 @@ def admin_create_vote(room_id):
 
     room = Room.query.get(room_id)
     if not room:
-        return jsonify({"error": "Room introuvable"}), 404
+        return jsonify({"error": "Salle introuvable"}), 404
 
     # Close existing open session
     open_session = VoteSession.query.filter_by(room_id=room_id, status="open").first()

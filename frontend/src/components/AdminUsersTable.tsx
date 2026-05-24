@@ -12,8 +12,15 @@ type User = {
   role: string;
 };
 
-const ALLOWED_PREFIXES = ["A","F","E","EA","MI","S"];
-const ROLE_OPTIONS = ["member","verifier","admin","en attente"];
+const ALLOWED_PREFIXES = ["A", "F", "E", "EA", "MI", "S"];
+const ROLE_OPTIONS = ["member", "verifier", "admin", "en attente"];
+
+const ROLE_LABELS: Record<string, string> = {
+  member: "Membre",
+  verifier: "Vérificateur",
+  admin: "Admin",
+  "en attente": "En attente",
+};
 
 function currentAcademicStartYear() {
   const d = new Date();
@@ -34,7 +41,11 @@ export default function AdminUsersTable() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
-  const [editValues, setEditValues] = useState<{ nom: string; prenom: string; identifiant: string }>({ nom: "", prenom: "", identifiant: "" });
+  const [editValues, setEditValues] = useState<{
+    nom: string;
+    prenom: string;
+    identifiant: string;
+  }>({ nom: "", prenom: "", identifiant: "" });
 
   // ---------- API ----------
   const fetchUsers = async () => {
@@ -46,9 +57,15 @@ export default function AdminUsersTable() {
 
   const ensureAdmin = async (): Promise<boolean> => {
     const res = await fetch("/api/me", { credentials: "include" });
-    if (!res.ok) { window.location.href = "/login"; return false; }
+    if (!res.ok) {
+      window.location.href = "/login";
+      return false;
+    }
     const me = await res.json();
-    if (me.role !== "admin") { window.location.href = "/"; return false; }
+    if (me.role !== "admin") {
+      window.location.href = "/";
+      return false;
+    }
     return true;
   };
 
@@ -61,7 +78,12 @@ export default function AdminUsersTable() {
   }, []);
 
   // ---------- Cartes ----------
-  const addCard = async (userId: number, annee: string, prefix: string, num: number) => {
+  const addCard = async (
+    userId: number,
+    annee: string,
+    prefix: string,
+    num: number,
+  ) => {
     const annee_code = `${prefix}-${num}`;
     const res = await fetch(`/api/admin/users/${userId}/annees`, {
       method: "PUT",
@@ -69,7 +91,10 @@ export default function AdminUsersTable() {
       credentials: "include",
       body: JSON.stringify({ annee, annee_code }),
     });
-    if (!res.ok) { alert("Erreur lors de l'ajout de la carte"); return; }
+    if (!res.ok) {
+      alert("Erreur lors de l'ajout de la carte");
+      return;
+    }
     await fetchUsers();
   };
 
@@ -79,7 +104,10 @@ export default function AdminUsersTable() {
       method: "DELETE",
       credentials: "include",
     });
-    if (!res.ok) { alert("Erreur lors de la suppression"); return; }
+    if (!res.ok) {
+      alert("Erreur lors de la suppression");
+      return;
+    }
     await fetchUsers();
   };
 
@@ -91,7 +119,10 @@ export default function AdminUsersTable() {
       credentials: "include",
       body: JSON.stringify({ role }),
     });
-    if (!res.ok) { alert("Erreur lors du changement de rôle"); return; }
+    if (!res.ok) {
+      alert("Erreur lors du changement de rôle");
+      return;
+    }
     await fetchUsers();
   };
 
@@ -102,7 +133,10 @@ export default function AdminUsersTable() {
       method: "DELETE",
       credentials: "include",
     });
-    if (!res.ok) { alert("Erreur lors de la suppression de l'utilisateur"); return; }
+    if (!res.ok) {
+      alert("Erreur lors de la suppression de l'utilisateur");
+      return;
+    }
     await fetchUsers();
   };
 
@@ -114,7 +148,10 @@ export default function AdminUsersTable() {
       credentials: "include",
       body: JSON.stringify(editValues),
     });
-    if (!res.ok) { alert("Erreur lors de la modification"); return; }
+    if (!res.ok) {
+      alert("Erreur lors de la modification");
+      return;
+    }
     setEditingUserId(null);
     await fetchUsers();
   };
@@ -124,13 +161,16 @@ export default function AdminUsersTable() {
   const yearRanges = makeYearRanges();
 
   const totalUsers = users.length;
-  const totalCards = users.reduce((sum, u) => sum + (u.cartes ? Object.keys(u.cartes).length : 0), 0);
+  const totalCards = users.reduce(
+    (sum, u) => sum + (u.cartes ? Object.keys(u.cartes).length : 0),
+    0,
+  );
 
   const downloadExcel = () => {
     if (!users.length) return;
     const yearSet = new Set<string>();
-    users.forEach(u => {
-      Object.keys(u.cartes ?? {}).forEach(year => yearSet.add(year));
+    users.forEach((u) => {
+      Object.keys(u.cartes ?? {}).forEach((year) => yearSet.add(year));
     });
     const yearColumns = Array.from(yearSet).sort((a, b) => {
       const numA = parseInt(a, 10);
@@ -141,16 +181,16 @@ export default function AdminUsersTable() {
       return b.localeCompare(a);
     });
     const header = ["Nom", "Prénom", "Identifiant", "Rôle", ...yearColumns];
-    const rows = users.map(u => [
+    const rows = users.map((u) => [
       u.nom,
       u.prenom,
       u.identifiant ?? "",
       u.role,
-      ...yearColumns.map(year => u.cartes?.[year] ?? ""),
+      ...yearColumns.map((year) => u.cartes?.[year] ?? ""),
     ]);
     const escapeCell = (value: string) => `"${value.replace(/"/g, '""')}"`;
     const tableContent = [header, ...rows]
-      .map(row => row.map(cell => escapeCell(String(cell ?? ""))).join(";"))
+      .map((row) => row.map((cell) => escapeCell(String(cell ?? ""))).join(";"))
       .join("\n");
     const blob = new Blob(["\uFEFF" + tableContent], {
       type: "application/vnd.ms-excel;charset=utf-8",
@@ -188,18 +228,29 @@ export default function AdminUsersTable() {
       </div>
       <div className="space-y-3 md:hidden">
         {users.map((u) => (
-          <article key={u.id} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+          <article
+            key={u.id}
+            className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm"
+          >
             <div className="mb-3 flex items-start justify-between gap-2">
               <div>
-                <p className="text-base font-semibold text-slate-900">{u.prenom} {u.nom}</p>
-                <p className="text-xs text-slate-500">{u.identifiant ?? "Sans identifiant"}</p>
+                <p className="text-base font-semibold text-slate-900">
+                  {u.prenom} {u.nom}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {u.identifiant ?? "Sans identifiant"}
+                </p>
               </div>
               <select
                 value={u.role}
-                onChange={e => changeRole(u.id, e.target.value)}
+                onChange={(e) => changeRole(u.id, e.target.value)}
                 className="rounded border border-gray-300 bg-white px-2 py-1 text-sm"
               >
-                {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                {ROLE_OPTIONS.map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_LABELS[r] ?? r}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -207,19 +258,31 @@ export default function AdminUsersTable() {
               <div className="mb-3 grid grid-cols-1 gap-2">
                 <input
                   value={editValues.nom}
-                  onChange={e => setEditValues(prev => ({ ...prev, nom: e.target.value }))}
+                  onChange={(e) =>
+                    setEditValues((prev) => ({ ...prev, nom: e.target.value }))
+                  }
                   className="w-full rounded border border-gray-300 p-2"
                   placeholder="Nom"
                 />
                 <input
                   value={editValues.prenom}
-                  onChange={e => setEditValues(prev => ({ ...prev, prenom: e.target.value }))}
+                  onChange={(e) =>
+                    setEditValues((prev) => ({
+                      ...prev,
+                      prenom: e.target.value,
+                    }))
+                  }
                   className="w-full rounded border border-gray-300 p-2"
                   placeholder="Prénom"
                 />
                 <input
                   value={editValues.identifiant}
-                  onChange={e => setEditValues(prev => ({ ...prev, identifiant: e.target.value }))}
+                  onChange={(e) =>
+                    setEditValues((prev) => ({
+                      ...prev,
+                      identifiant: e.target.value,
+                    }))
+                  }
                   className="w-full rounded border border-gray-300 p-2"
                   placeholder="Identifiant"
                 />
@@ -227,24 +290,37 @@ export default function AdminUsersTable() {
             ) : null}
 
             <div className="mb-3">
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Cartes</p>
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Cartes
+              </p>
               <div className="space-y-1">
-                {u.cartes && Object.entries(u.cartes).length > 0
-                  ? Object.entries(u.cartes).sort((a, b) => Number(b[0]) - Number(a[0])).map(([annee, code]) => (
-                    <div key={annee} className="flex items-center justify-between rounded bg-slate-50 px-2 py-1 text-sm">
-                      <span>{annee} - {code}</span>
-                      <button className="rounded bg-red-100 px-2 py-1 text-xs font-semibold text-red-700" onClick={() => removeCard(u.id, annee)}>
-                        Suppr.
-                      </button>
-                    </div>
-                  ))
-                  : <span className="text-sm text-gray-400">Aucune carte</span>
-                }
+                {u.cartes && Object.entries(u.cartes).length > 0 ? (
+                  Object.entries(u.cartes)
+                    .sort((a, b) => Number(b[0]) - Number(a[0]))
+                    .map(([annee, code]) => (
+                      <div
+                        key={annee}
+                        className="flex items-center justify-between rounded bg-slate-50 px-2 py-1 text-sm"
+                      >
+                        <span>
+                          {annee} - {code}
+                        </span>
+                        <button
+                          className="rounded bg-red-100 px-2 py-1 text-xs font-semibold text-red-700"
+                          onClick={() => removeCard(u.id, annee)}
+                        >
+                          Suppr.
+                        </button>
+                      </div>
+                    ))
+                ) : (
+                  <span className="text-sm text-gray-400">Aucune carte</span>
+                )}
               </div>
             </div>
 
             <form
-              onSubmit={e => {
+              onSubmit={(e) => {
                 e.preventDefault();
                 const f = e.currentTarget as any;
                 const annee = f.annee.value;
@@ -254,35 +330,84 @@ export default function AdminUsersTable() {
               }}
               className="mb-3 grid grid-cols-1 gap-2"
             >
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Ajouter une carte</p>
-              <select name="annee" required className="w-full rounded border border-gray-300 p-2">
-                {yearRanges.map(y => <option key={y} value={y}>{y}</option>)}
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Ajouter une carte
+              </p>
+              <select
+                name="annee"
+                required
+                className="w-full rounded border border-gray-300 p-2"
+              >
+                {yearRanges.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
               </select>
               <div className="grid grid-cols-2 gap-2">
-                <select name="prefix" required className="w-full rounded border border-gray-300 p-2">
-                  {ALLOWED_PREFIXES.map(p => <option key={p} value={p}>{p}</option>)}
+                <select
+                  name="prefix"
+                  required
+                  className="w-full rounded border border-gray-300 p-2"
+                >
+                  {ALLOWED_PREFIXES.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
                 </select>
-                <input name="num" type="number" min={1} placeholder="Numéro" required className="w-full rounded border border-gray-300 p-2" />
+                <input
+                  name="num"
+                  type="number"
+                  min={1}
+                  placeholder="Numéro"
+                  required
+                  className="w-full rounded border border-gray-300 p-2"
+                />
               </div>
-              <button type="submit" className="rounded bg-blue-900 px-3 py-2 text-sm font-semibold text-white">Ajouter</button>
+              <button
+                type="submit"
+                className="rounded bg-blue-900 px-3 py-2 text-sm font-semibold text-white"
+              >
+                Ajouter
+              </button>
             </form>
 
             <div className="flex flex-wrap gap-2">
               {editingUserId === u.id ? (
                 <>
-                  <button onClick={() => saveUser(u.id)} className="rounded bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700">
+                  <button
+                    onClick={() => saveUser(u.id)}
+                    className="rounded bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700"
+                  >
                     Enregistrer
                   </button>
-                  <button onClick={() => setEditingUserId(null)} className="rounded bg-gray-400 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-500">
+                  <button
+                    onClick={() => setEditingUserId(null)}
+                    className="rounded bg-gray-400 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-500"
+                  >
                     Annuler
                   </button>
                 </>
               ) : (
                 <>
-                  <button onClick={() => { setEditingUserId(u.id); setEditValues({ nom: u.nom, prenom: u.prenom, identifiant: u.identifiant ?? "" }); }} className="rounded bg-yellow-500 px-3 py-2 text-sm font-semibold text-white hover:bg-yellow-600">
+                  <button
+                    onClick={() => {
+                      setEditingUserId(u.id);
+                      setEditValues({
+                        nom: u.nom,
+                        prenom: u.prenom,
+                        identifiant: u.identifiant ?? "",
+                      });
+                    }}
+                    className="rounded bg-yellow-500 px-3 py-2 text-sm font-semibold text-white hover:bg-yellow-600"
+                  >
                     Modifier
                   </button>
-                  <button onClick={() => deleteUser(u.id)} className="rounded bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700">
+                  <button
+                    onClick={() => deleteUser(u.id)}
+                    className="rounded bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                  >
                     Supprimer
                   </button>
                 </>
@@ -306,82 +431,171 @@ export default function AdminUsersTable() {
             </tr>
           </thead>
           <tbody>
-          {users.map(u => (
-            <tr key={u.id}>
-              <td className="border px-2 py-1">
-                {editingUserId === u.id ? (
-                  <input
-                    value={editValues.nom}
-                    onChange={e => setEditValues(prev => ({ ...prev, nom: e.target.value }))}
-                    className="border p-1 rounded"
-                  />
-                ) : u.nom}
-              </td>
-              <td className="border px-2 py-1">
-                {editingUserId === u.id ? (
-                  <input
-                    value={editValues.prenom}
-                    onChange={e => setEditValues(prev => ({ ...prev, prenom: e.target.value }))}
-                    className="border p-1 rounded"
-                  />
-                ) : u.prenom}
-              </td>
-              <td className="border px-2 py-1">
-                {editingUserId === u.id ? (
-                  <input
-                    value={editValues.identifiant}
-                    onChange={e => setEditValues(prev => ({ ...prev, identifiant: e.target.value }))}
-                    className="border p-1 rounded"
-                  />
-                ) : u.identifiant ?? ""}
-              </td>
-              <td className="border px-2 py-1">
-                {u.cartes && Object.entries(u.cartes).length > 0
-                  ? Object.entries(u.cartes).sort((a,b)=>Number(b[0])-Number(a[0])).map(([annee, code])=>(
-                    <div key={annee}>
-                      {annee} → {code}{" "}
-                      <button className="text-red-600" onClick={()=>removeCard(u.id,annee)}>🗑</button>
-                    </div>
-                  ))
-                  : <span className="text-gray-400">—</span>
-                }
-              </td>
-              <td className="border px-2 py-1">
-                <form onSubmit={e => {
-                  e.preventDefault();
-                  const f = e.currentTarget as any;
-                  const annee = f.annee.value;
-                  const prefix = f.prefix.value;
-                  const num = parseInt(f.num.value,10);
-                  addCard(u.id, annee, prefix, num);
-                }} className="flex flex-col gap-1">
-                  <select name="annee" required>{yearRanges.map(y=><option key={y} value={y}>{y}</option>)}</select>
-                  <select name="prefix" required>{ALLOWED_PREFIXES.map(p=><option key={p} value={p}>{p}</option>)}</select>
-                  <input name="num" type="number" min={1} placeholder="Numéro" required />
-                  <button type="submit" className="bg-blue-900 text-white px-2 py-1 rounded">➕</button>
-                </form>
-              </td>
-              <td className="border px-2 py-1">
-                <select value={u.role} onChange={e=>changeRole(u.id,e.target.value)}>
-                  {ROLE_OPTIONS.map(r=><option key={r} value={r}>{r}</option>)}
-                </select>
-              </td>
-              <td className="border px-2 py-1 flex gap-1">
-                {editingUserId === u.id ? (
-                  <>
-                    <button onClick={()=>saveUser(u.id)} className="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700">💾</button>
-                    <button onClick={()=>setEditingUserId(null)} className="bg-gray-400 text-white px-2 py-1 rounded hover:bg-gray-500">✖</button>
-                  </>
-                ) : (
-                  <>
-                    <button onClick={()=>{setEditingUserId(u.id); setEditValues({nom:u.nom, prenom:u.prenom, identifiant:u.identifiant ?? ""})}} className="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600">✏️</button>
-                    <button onClick={()=>deleteUser(u.id)} className="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">🗑</button>
-                  </>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
+            {users.map((u) => (
+              <tr key={u.id}>
+                <td className="border px-2 py-1">
+                  {editingUserId === u.id ? (
+                    <input
+                      value={editValues.nom}
+                      onChange={(e) =>
+                        setEditValues((prev) => ({
+                          ...prev,
+                          nom: e.target.value,
+                        }))
+                      }
+                      className="border p-1 rounded"
+                    />
+                  ) : (
+                    u.nom
+                  )}
+                </td>
+                <td className="border px-2 py-1">
+                  {editingUserId === u.id ? (
+                    <input
+                      value={editValues.prenom}
+                      onChange={(e) =>
+                        setEditValues((prev) => ({
+                          ...prev,
+                          prenom: e.target.value,
+                        }))
+                      }
+                      className="border p-1 rounded"
+                    />
+                  ) : (
+                    u.prenom
+                  )}
+                </td>
+                <td className="border px-2 py-1">
+                  {editingUserId === u.id ? (
+                    <input
+                      value={editValues.identifiant}
+                      onChange={(e) =>
+                        setEditValues((prev) => ({
+                          ...prev,
+                          identifiant: e.target.value,
+                        }))
+                      }
+                      className="border p-1 rounded"
+                    />
+                  ) : (
+                    (u.identifiant ?? "")
+                  )}
+                </td>
+                <td className="border px-2 py-1">
+                  {u.cartes && Object.entries(u.cartes).length > 0 ? (
+                    Object.entries(u.cartes)
+                      .sort((a, b) => Number(b[0]) - Number(a[0]))
+                      .map(([annee, code]) => (
+                        <div key={annee}>
+                          {annee} → {code}{" "}
+                          <button
+                            className="text-red-600"
+                            onClick={() => removeCard(u.id, annee)}
+                          >
+                            🗑
+                          </button>
+                        </div>
+                      ))
+                  ) : (
+                    <span className="text-gray-400">—</span>
+                  )}
+                </td>
+                <td className="border px-2 py-1">
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const f = e.currentTarget as any;
+                      const annee = f.annee.value;
+                      const prefix = f.prefix.value;
+                      const num = parseInt(f.num.value, 10);
+                      addCard(u.id, annee, prefix, num);
+                    }}
+                    className="flex flex-col gap-1"
+                  >
+                    <select name="annee" required>
+                      {yearRanges.map((y) => (
+                        <option key={y} value={y}>
+                          {y}
+                        </option>
+                      ))}
+                    </select>
+                    <select name="prefix" required>
+                      {ALLOWED_PREFIXES.map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      name="num"
+                      type="number"
+                      min={1}
+                      placeholder="Numéro"
+                      required
+                    />
+                    <button
+                      type="submit"
+                      className="bg-blue-900 text-white px-2 py-1 rounded"
+                    >
+                      ➕
+                    </button>
+                  </form>
+                </td>
+                <td className="border px-2 py-1">
+                  <select
+                    value={u.role}
+                    onChange={(e) => changeRole(u.id, e.target.value)}
+                  >
+                    {ROLE_OPTIONS.map((r) => (
+                      <option key={r} value={r}>
+                        {ROLE_LABELS[r] ?? r}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className="border px-2 py-1 flex gap-1">
+                  {editingUserId === u.id ? (
+                    <>
+                      <button
+                        onClick={() => saveUser(u.id)}
+                        className="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
+                      >
+                        💾
+                      </button>
+                      <button
+                        onClick={() => setEditingUserId(null)}
+                        className="bg-gray-400 text-white px-2 py-1 rounded hover:bg-gray-500"
+                      >
+                        ✖
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => {
+                          setEditingUserId(u.id);
+                          setEditValues({
+                            nom: u.nom,
+                            prenom: u.prenom,
+                            identifiant: u.identifiant ?? "",
+                          });
+                        }}
+                        className="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => deleteUser(u.id)}
+                        className="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700"
+                      >
+                        🗑
+                      </button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
         </table>
       </div>
     </div>

@@ -1,0 +1,68 @@
+---
+interface Props {
+  redirectTo?: string;
+  forbiddenTo?: string;
+  loader?: string;
+  allowedRoles?: string[];
+}
+
+const {
+  redirectTo = "/login",
+  forbiddenTo = "/",
+  loader = "Chargement...",
+  allowedRoles = [],
+} = Astro.props;
+---
+
+<div
+  data-auth-gate
+  data-redirect-to={redirectTo}
+  data-forbidden-to={forbiddenTo}
+  data-allowed-roles={allowedRoles.join(",")}
+  style="display: none;"
+>
+  <slot />
+</div>
+<div data-auth-loader>{loader}</div>
+
+<script>
+  function initAuthGates() {
+    document
+      .querySelectorAll<HTMLElement>("[data-auth-gate]")
+      .forEach((gate) => {
+        if (gate.dataset.authReady === "true") return;
+        gate.dataset.authReady = "true";
+
+        const loader = gate.nextElementSibling;
+        const redirectTo = gate.dataset.redirectTo || "/login";
+        const forbiddenTo = gate.dataset.forbiddenTo || "/";
+        const allowedRoles = (gate.dataset.allowedRoles || "")
+          .split(",")
+          .map((role) => role.trim())
+          .filter(Boolean);
+
+        fetch("/api/me", { credentials: "include" })
+          .then(async (res) => {
+            if (!res.ok) {
+              window.location.href = redirectTo;
+              return;
+            }
+
+            const me = await res.json();
+            if (allowedRoles.length && !allowedRoles.includes(me.role)) {
+              window.location.href = forbiddenTo;
+              return;
+            }
+
+            gate.style.removeProperty("display");
+            loader?.remove();
+          })
+          .catch(() => {
+            window.location.href = redirectTo;
+          });
+      });
+  }
+
+  initAuthGates();
+  document.addEventListener("astro:page-load", initAuthGates);
+</script>
