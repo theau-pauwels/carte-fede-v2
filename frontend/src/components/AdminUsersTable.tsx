@@ -1,5 +1,5 @@
 // src/components/AdminUsersTable.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Memberships = Record<string, string>; // { "2024": "A-12" }
 
@@ -12,6 +12,14 @@ type User = {
   role: string;
 };
 
+type ConfirmationDialog = {
+  title: string;
+  message: string;
+  details?: string;
+  confirmLabel: string;
+  onConfirm: () => Promise<void>;
+};
+
 const ALLOWED_PREFIXES = ["A", "F", "E", "EA", "MI", "S"];
 const ROLE_OPTIONS = ["member", "verifier", "admin", "en attente"];
 
@@ -21,6 +29,8 @@ const ROLE_LABELS: Record<string, string> = {
   admin: "Admin",
   "en attente": "En attente",
 };
+
+const PAGE_SIZE = 25;
 
 function currentAcademicStartYear() {
   const d = new Date();
@@ -40,7 +50,15 @@ function makeYearRanges(countBefore = 2, countAfter = 6) {
 export default function AdminUsersTable() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [cardFilter, setCardFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [confirmation, setConfirmation] = useState<ConfirmationDialog | null>(
+    null,
+  );
+  const [confirmationLoading, setConfirmationLoading] = useState(false);
   const [editValues, setEditValues] = useState<{
     nom: string;
     prenom: string;
@@ -77,6 +95,10 @@ export default function AdminUsersTable() {
     })();
   }, []);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, roleFilter, cardFilter]);
+
   // ---------- Cartes ----------
   const addCard = async (
     userId: number,
@@ -99,7 +121,6 @@ export default function AdminUsersTable() {
   };
 
   const removeCard = async (userId: number, annee: string) => {
-    if (!confirm(`Supprimer la carte pour ${annee} ?`)) return;
     const res = await fetch(`/api/admin/users/${userId}/annees/${annee}`, {
       method: "DELETE",
       credentials: "include",
@@ -109,6 +130,16 @@ export default function AdminUsersTable() {
       return;
     }
     await fetchUsers();
+  };
+
+  const requestRemoveCard = (user: User, annee: string, code: string) => {
+    setConfirmation({
+      title: "Supprimer cette carte ?",
+      message: `La carte ${annee} - ${code} sera retirée de ${user.prenom} ${user.nom}.`,
+      details: "Cette action ne supprimera pas l'utilisateur.",
+      confirmLabel: "Supprimer la carte",
+      onConfirm: () => removeCard(user.id, annee),
+    });
   };
 
   // ---------- Rôle ----------
@@ -128,7 +159,6 @@ export default function AdminUsersTable() {
 
   // ---------- Supprimer utilisateur ----------
   const deleteUser = async (userId: number) => {
-    if (!confirm("Voulez-vous vraiment supprimer cet utilisateur ?")) return;
     const res = await fetch(`/api/admin/users/${userId}`, {
       method: "DELETE",
       credentials: "include",
@@ -138,6 +168,36 @@ export default function AdminUsersTable() {
       return;
     }
     await fetchUsers();
+  };
+
+  const requestDeleteUser = (user: User) => {
+    const cardCount = Object.keys(user.cartes ?? {}).length;
+    setConfirmation({
+      title: "Supprimer cet utilisateur ?",
+      message: `${user.prenom} ${user.nom} sera supprimé définitivement.`,
+      details:
+        cardCount > 0
+          ? `${cardCount} carte${cardCount > 1 ? "s" : ""} liée${cardCount > 1 ? "s" : ""} à ce compte seront aussi concernées.`
+          : "Ce compte n'a aucune carte liée.",
+      confirmLabel: "Supprimer l'utilisateur",
+      onConfirm: () => deleteUser(user.id),
+    });
+  };
+
+  const confirmAction = async () => {
+    if (!confirmation || confirmationLoading) return;
+    setConfirmationLoading(true);
+    try {
+      await confirmation.onConfirm();
+      setConfirmation(null);
+    } finally {
+      setConfirmationLoading(false);
+    }
+  };
+
+  const closeConfirmation = () => {
+    if (confirmationLoading) return;
+    setConfirmation(null);
   };
 
   // ---------- Modifier utilisateur ----------
@@ -156,8 +216,6 @@ export default function AdminUsersTable() {
     await fetchUsers();
   };
 
-  if (loading) return <p>Chargement...</p>;
-
   const yearRanges = makeYearRanges();
 
   const totalUsers = users.length;
@@ -165,11 +223,44 @@ export default function AdminUsersTable() {
     (sum, u) => sum + (u.cartes ? Object.keys(u.cartes).length : 0),
     0,
   );
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredUsers = useMemo(() => {
+    return users.filter((u) => {
+      const identity =
+        `${u.nom} ${u.prenom} ${u.identifiant ?? ""}`.toLowerCase();
+      const hasCards = Object.keys(u.cartes ?? {}).length > 0;
+      const matchesSearch =
+        normalizedSearch.length === 0 || identity.includes(normalizedSearch);
+      const matchesRole = roleFilter === "all" || u.role === roleFilter;
+      const matchesCard =
+        cardFilter === "all" ||
+        (cardFilter === "with" && hasCards) ||
+        (cardFilter === "without" && !hasCards);
+
+      return matchesSearch && matchesRole && matchesCard;
+    });
+  }, [users, normalizedSearch, roleFilter, cardFilter]);
+
+  const totalFilteredCards = filteredUsers.reduce(
+    (sum, u) => sum + (u.cartes ? Object.keys(u.cartes).length : 0),
+    0,
+  );
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedUsers = filteredUsers.slice(
+    (safeCurrentPage - 1) * PAGE_SIZE,
+    safeCurrentPage * PAGE_SIZE,
+  );
+  const pageStart =
+    filteredUsers.length === 0 ? 0 : (safeCurrentPage - 1) * PAGE_SIZE + 1;
+  const pageEnd = Math.min(safeCurrentPage * PAGE_SIZE, filteredUsers.length);
+
+  if (loading) return <p>Chargement...</p>;
 
   const downloadExcel = () => {
-    if (!users.length) return;
+    if (!filteredUsers.length) return;
     const yearSet = new Set<string>();
-    users.forEach((u) => {
+    filteredUsers.forEach((u) => {
       Object.keys(u.cartes ?? {}).forEach((year) => yearSet.add(year));
     });
     const yearColumns = Array.from(yearSet).sort((a, b) => {
@@ -181,7 +272,7 @@ export default function AdminUsersTable() {
       return b.localeCompare(a);
     });
     const header = ["Nom", "Prénom", "Identifiant", "Rôle", ...yearColumns];
-    const rows = users.map((u) => [
+    const rows = filteredUsers.map((u) => [
       u.nom,
       u.prenom,
       u.identifiant ?? "",
@@ -215,19 +306,102 @@ export default function AdminUsersTable() {
           <span className="rounded-full bg-emerald-50 px-4 py-2 text-sm text-emerald-700 sm:text-base">
             <span className="font-semibold">{totalCards}</span> cartes
           </span>
+          <span className="rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-700 sm:text-base">
+            <span className="font-semibold">{filteredUsers.length}</span>{" "}
+            affichés
+          </span>
         </div>
         <button
           type="button"
           onClick={downloadExcel}
-          disabled={!totalUsers}
-          className="flex items-center gap-2 self-start rounded-full bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:from-blue-700 hover:to-blue-600 disabled:cursor-not-allowed disabled:from-gray-400 disabled:text-gray-200 disabled:to-gray-400 disabled:shadow-none sm:self-auto sm:text-base"
+          disabled={!filteredUsers.length}
+          className="flex items-center gap-2 self-start rounded-full bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:from-blue-700 hover:to-blue-600 disabled:cursor-not-allowed disabled:from-gray-400 disabled:to-gray-400 disabled:text-gray-200 disabled:shadow-none sm:self-auto sm:text-base"
         >
           <span aria-hidden>📥</span>
           Exporter en Excel
         </button>
       </div>
+
+      <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="grid gap-3 lg:grid-cols-[minmax(280px,1fr)_220px_220px]">
+          <label className="block">
+            <span className="mb-1 block text-sm font-semibold text-slate-700">
+              Recherche
+            </span>
+            <input
+              type="search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Nom, prénom ou identifiant"
+              className="w-full rounded border border-gray-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-sm font-semibold text-slate-700">
+              Rôle
+            </span>
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            >
+              <option value="all">Tous les rôles</option>
+              {ROLE_OPTIONS.map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_LABELS[r] ?? r}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-sm font-semibold text-slate-700">
+              Cartes
+            </span>
+            <select
+              value={cardFilter}
+              onChange={(e) => setCardFilter(e.target.value)}
+              className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            >
+              <option value="all">Avec et sans carte</option>
+              <option value="with">Avec carte</option>
+              <option value="without">Sans carte</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="mt-3 flex flex-col gap-2 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            {filteredUsers.length} utilisateur
+            {filteredUsers.length > 1 ? "s" : ""} trouvé
+            {filteredUsers.length > 1 ? "s" : ""}, {totalFilteredCards} carte
+            {totalFilteredCards > 1 ? "s" : ""}
+          </p>
+          {(searchTerm || roleFilter !== "all" || cardFilter !== "all") && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm("");
+                setRoleFilter("all");
+                setCardFilter("all");
+              }}
+              className="self-start rounded border border-gray-300 px-3 py-1.5 font-semibold text-slate-700 transition hover:bg-slate-50 sm:self-auto"
+            >
+              Réinitialiser
+            </button>
+          )}
+        </div>
+      </div>
+
+      {filteredUsers.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-slate-500">
+          Aucun utilisateur ne correspond aux filtres.
+        </div>
+      ) : null}
+
       <div className="space-y-3 md:hidden">
-        {users.map((u) => (
+        {paginatedUsers.map((u) => (
           <article
             key={u.id}
             className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm"
@@ -307,7 +481,7 @@ export default function AdminUsersTable() {
                         </span>
                         <button
                           className="rounded bg-red-100 px-2 py-1 text-xs font-semibold text-red-700"
-                          onClick={() => removeCard(u.id, annee)}
+                          onClick={() => requestRemoveCard(u, annee, code)}
                         >
                           Suppr.
                         </button>
@@ -405,7 +579,7 @@ export default function AdminUsersTable() {
                     Modifier
                   </button>
                   <button
-                    onClick={() => deleteUser(u.id)}
+                    onClick={() => requestDeleteUser(u)}
                     className="rounded bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700"
                   >
                     Supprimer
@@ -444,7 +618,7 @@ export default function AdminUsersTable() {
             </tr>
           </thead>
           <tbody>
-            {users.map((u) => (
+            {paginatedUsers.map((u) => (
               <tr key={u.id}>
                 <td className="border-b border-r px-3 py-3 align-top">
                   {editingUserId === u.id ? (
@@ -508,7 +682,7 @@ export default function AdminUsersTable() {
                           </span>
                           <button
                             className="shrink-0 rounded bg-red-50 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-100"
-                            onClick={() => removeCard(u.id, annee)}
+                            onClick={() => requestRemoveCard(u, annee, code)}
                           >
                             Suppr.
                           </button>
@@ -583,44 +757,44 @@ export default function AdminUsersTable() {
                 </td>
                 <td className="border-b px-3 py-3 align-top">
                   <div className="flex flex-wrap gap-2">
-                  {editingUserId === u.id ? (
-                    <>
-                      <button
-                        onClick={() => saveUser(u.id)}
-                        className="rounded bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700"
-                      >
-                        OK
-                      </button>
-                      <button
-                        onClick={() => setEditingUserId(null)}
-                        className="rounded bg-gray-400 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-500"
-                      >
-                        Annuler
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => {
-                          setEditingUserId(u.id);
-                          setEditValues({
-                            nom: u.nom,
-                            prenom: u.prenom,
-                            identifiant: u.identifiant ?? "",
-                          });
-                        }}
-                        className="rounded bg-yellow-500 px-3 py-2 text-sm font-semibold text-white hover:bg-yellow-600"
-                      >
-                        Modifier
-                      </button>
-                      <button
-                        onClick={() => deleteUser(u.id)}
-                        className="rounded bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700"
-                      >
-                        Suppr.
-                      </button>
-                    </>
-                  )}
+                    {editingUserId === u.id ? (
+                      <>
+                        <button
+                          onClick={() => saveUser(u.id)}
+                          className="rounded bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700"
+                        >
+                          OK
+                        </button>
+                        <button
+                          onClick={() => setEditingUserId(null)}
+                          className="rounded bg-gray-400 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-500"
+                        >
+                          Annuler
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            setEditingUserId(u.id);
+                            setEditValues({
+                              nom: u.nom,
+                              prenom: u.prenom,
+                              identifiant: u.identifiant ?? "",
+                            });
+                          }}
+                          className="rounded bg-yellow-500 px-3 py-2 text-sm font-semibold text-white hover:bg-yellow-600"
+                        >
+                          Modifier
+                        </button>
+                        <button
+                          onClick={() => requestDeleteUser(u)}
+                          className="rounded bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                        >
+                          Suppr.
+                        </button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -628,6 +802,92 @@ export default function AdminUsersTable() {
           </tbody>
         </table>
       </div>
+
+      {filteredUsers.length > PAGE_SIZE ? (
+        <div className="mt-4 flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3 text-sm text-slate-700 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            {pageStart}-{pageEnd} sur {filteredUsers.length}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              disabled={safeCurrentPage === 1}
+              className="rounded border border-gray-300 px-3 py-2 font-semibold transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-white"
+            >
+              Précédent
+            </button>
+            <span className="min-w-24 text-center font-semibold">
+              Page {safeCurrentPage} / {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() =>
+                setCurrentPage((page) => Math.min(totalPages, page + 1))
+              }
+              disabled={safeCurrentPage === totalPages}
+              className="rounded border border-gray-300 px-3 py-2 font-semibold transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-white"
+            >
+              Suivant
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {confirmation ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) closeConfirmation();
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-confirm-title"
+            className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-5 shadow-xl"
+          >
+            <div className="mb-4">
+              <p
+                id="admin-confirm-title"
+                className="text-lg font-semibold text-slate-950"
+              >
+                {confirmation.title}
+              </p>
+              <p className="mt-2 text-sm text-slate-700">
+                {confirmation.message}
+              </p>
+              {confirmation.details ? (
+                <p className="mt-2 rounded border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-800">
+                  {confirmation.details}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={closeConfirmation}
+                disabled={confirmationLoading}
+                className="rounded border border-gray-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-gray-400"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={confirmAction}
+                disabled={confirmationLoading}
+                className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
+              >
+                {confirmationLoading
+                  ? "Suppression..."
+                  : confirmation.confirmLabel}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }
