@@ -15,7 +15,7 @@ export default defineConfig({
     sitemap(),
     robotsTxt(),
   ],
-  site: "https://carte.fede.fpms.ac.be",
+  site: "https://carte-test.fede.fpms.ac.be",
   output: "static",
   adapter: vercel({
     webAnalytics: {
@@ -37,12 +37,14 @@ export default defineConfig({
          'localhost',
          '127.0.0.1',
          '::1',
+         '100.95.195.59',
+         'carte-test.fede.fpms.ac.be',
+         'carte.fede.fpms.ac.be',
          'fede.fpms.ac.be',
        ],
        hmr: {
-         protocol: 'ws',
-         host: process.env.HMR_HOST || 'localhost',
-         port: 80,
+         protocol: 'wss',
+         clientPort: 443,
          overlay: false,
       },
     },

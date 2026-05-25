@@ -8,13 +8,16 @@ export default defineConfig({
     allowedHosts: [
       'localhost',
       '127.0.0.1',
+      '::1',
       'frontend',
-      'carte-fede-test.magellan.fpms.ac.be'
+      '100.95.195.59',
+      'carte-test.fede.fpms.ac.be',
+      'carte.fede.fpms.ac.be',
+      'fede.fpms.ac.be',
     ],
     hmr: {
-      host: 'carte-fede-test.magellan.fpms.ac.be',
-      protocol: 'ws', // ⚠️ HTTP => ws
-      clientPort: 80  // ⚠️ puisque ton Nginx écoute sur 80
+      protocol: 'wss',
+      clientPort: 443
     }
   }
 });

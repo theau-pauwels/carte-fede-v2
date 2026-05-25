@@ -417,23 +417,36 @@ export default function AdminUsersTable() {
         ))}
       </div>
 
-      <div className="hidden w-full overflow-x-auto md:block">
-        <table className="w-full border-collapse border">
+      <div className="hidden w-full overflow-x-auto rounded-lg border border-gray-200 bg-white md:block">
+        <table className="min-w-[1180px] table-fixed border-collapse">
+          <colgroup>
+            <col className="w-[14%]" />
+            <col className="w-[14%]" />
+            <col className="w-[20%]" />
+            <col className="w-[18%]" />
+            <col className="w-[17%]" />
+            <col className="w-[9%]" />
+            <col className="w-[8%]" />
+          </colgroup>
           <thead>
             <tr>
-              <th className="border px-2 py-1">Nom</th>
-              <th className="border px-2 py-1">Prénom</th>
-              <th className="border px-2 py-1">Identifiant</th>
-              <th className="border px-2 py-1">Cartes</th>
-              <th className="border px-2 py-1">Ajouter une carte</th>
-              <th className="border px-2 py-1">Rôle</th>
-              <th className="border px-2 py-1">Actions</th>
+              <th className="border-b border-r px-3 py-2 text-left">Nom</th>
+              <th className="border-b border-r px-3 py-2 text-left">Prénom</th>
+              <th className="border-b border-r px-3 py-2 text-left">
+                Identifiant
+              </th>
+              <th className="border-b border-r px-3 py-2 text-left">Cartes</th>
+              <th className="border-b border-r px-3 py-2 text-left">
+                Ajouter une carte
+              </th>
+              <th className="border-b border-r px-3 py-2 text-left">Rôle</th>
+              <th className="border-b px-3 py-2 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
             {users.map((u) => (
               <tr key={u.id}>
-                <td className="border px-2 py-1">
+                <td className="border-b border-r px-3 py-3 align-top">
                   {editingUserId === u.id ? (
                     <input
                       value={editValues.nom}
@@ -443,13 +456,13 @@ export default function AdminUsersTable() {
                           nom: e.target.value,
                         }))
                       }
-                      className="border p-1 rounded"
+                      className="w-full min-w-0 rounded border border-gray-300 p-2"
                     />
                   ) : (
                     u.nom
                   )}
                 </td>
-                <td className="border px-2 py-1">
+                <td className="border-b border-r px-3 py-3 align-top">
                   {editingUserId === u.id ? (
                     <input
                       value={editValues.prenom}
@@ -459,13 +472,13 @@ export default function AdminUsersTable() {
                           prenom: e.target.value,
                         }))
                       }
-                      className="border p-1 rounded"
+                      className="w-full min-w-0 rounded border border-gray-300 p-2"
                     />
                   ) : (
                     u.prenom
                   )}
                 </td>
-                <td className="border px-2 py-1">
+                <td className="border-b border-r px-3 py-3 align-top">
                   {editingUserId === u.id ? (
                     <input
                       value={editValues.identifiant}
@@ -475,24 +488,29 @@ export default function AdminUsersTable() {
                           identifiant: e.target.value,
                         }))
                       }
-                      className="border p-1 rounded"
+                      className="w-full min-w-0 rounded border border-gray-300 p-2"
                     />
                   ) : (
                     (u.identifiant ?? "")
                   )}
                 </td>
-                <td className="border px-2 py-1">
+                <td className="border-b border-r px-3 py-3 align-top">
                   {u.cartes && Object.entries(u.cartes).length > 0 ? (
                     Object.entries(u.cartes)
                       .sort((a, b) => Number(b[0]) - Number(a[0]))
                       .map(([annee, code]) => (
-                        <div key={annee}>
-                          {annee} → {code}{" "}
+                        <div
+                          key={annee}
+                          className="mb-1 flex items-center justify-between gap-2 rounded bg-slate-50 px-2 py-1 text-sm"
+                        >
+                          <span className="truncate">
+                            {annee} - {code}
+                          </span>
                           <button
-                            className="text-red-600"
+                            className="shrink-0 rounded bg-red-50 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-100"
                             onClick={() => removeCard(u.id, annee)}
                           >
-                            🗑
+                            Suppr.
                           </button>
                         </div>
                       ))
@@ -500,7 +518,7 @@ export default function AdminUsersTable() {
                     <span className="text-gray-400">—</span>
                   )}
                 </td>
-                <td className="border px-2 py-1">
+                <td className="border-b border-r px-3 py-3 align-top">
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
@@ -510,16 +528,24 @@ export default function AdminUsersTable() {
                       const num = parseInt(f.num.value, 10);
                       addCard(u.id, annee, prefix, num);
                     }}
-                    className="flex flex-col gap-1"
+                    className="grid grid-cols-[1fr_72px] gap-2"
                   >
-                    <select name="annee" required>
+                    <select
+                      name="annee"
+                      required
+                      className="col-span-2 w-full rounded border border-gray-300 px-2 py-2"
+                    >
                       {yearRanges.map((y) => (
                         <option key={y} value={y}>
                           {y}
                         </option>
                       ))}
                     </select>
-                    <select name="prefix" required>
+                    <select
+                      name="prefix"
+                      required
+                      className="w-full rounded border border-gray-300 px-2 py-2"
+                    >
                       {ALLOWED_PREFIXES.map((p) => (
                         <option key={p} value={p}>
                           {p}
@@ -532,19 +558,21 @@ export default function AdminUsersTable() {
                       min={1}
                       placeholder="Numéro"
                       required
+                      className="w-full min-w-0 rounded border border-gray-300 px-2 py-2"
                     />
                     <button
                       type="submit"
-                      className="bg-blue-900 text-white px-2 py-1 rounded"
+                      className="col-span-2 rounded bg-blue-900 px-2 py-2 text-sm font-semibold text-white hover:bg-blue-800"
                     >
-                      ➕
+                      Ajouter
                     </button>
                   </form>
                 </td>
-                <td className="border px-2 py-1">
+                <td className="border-b border-r px-3 py-3 align-top">
                   <select
                     value={u.role}
                     onChange={(e) => changeRole(u.id, e.target.value)}
+                    className="w-full rounded border border-gray-300 px-2 py-2 text-sm"
                   >
                     {ROLE_OPTIONS.map((r) => (
                       <option key={r} value={r}>
@@ -553,20 +581,21 @@ export default function AdminUsersTable() {
                     ))}
                   </select>
                 </td>
-                <td className="border px-2 py-1 flex gap-1">
+                <td className="border-b px-3 py-3 align-top">
+                  <div className="flex flex-wrap gap-2">
                   {editingUserId === u.id ? (
                     <>
                       <button
                         onClick={() => saveUser(u.id)}
-                        className="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
+                        className="rounded bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700"
                       >
-                        💾
+                        OK
                       </button>
                       <button
                         onClick={() => setEditingUserId(null)}
-                        className="bg-gray-400 text-white px-2 py-1 rounded hover:bg-gray-500"
+                        className="rounded bg-gray-400 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-500"
                       >
-                        ✖
+                        Annuler
                       </button>
                     </>
                   ) : (
@@ -580,18 +609,19 @@ export default function AdminUsersTable() {
                             identifiant: u.identifiant ?? "",
                           });
                         }}
-                        className="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600"
+                        className="rounded bg-yellow-500 px-3 py-2 text-sm font-semibold text-white hover:bg-yellow-600"
                       >
-                        ✏️
+                        Modifier
                       </button>
                       <button
                         onClick={() => deleteUser(u.id)}
-                        className="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700"
+                        className="rounded bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700"
                       >
-                        🗑
+                        Suppr.
                       </button>
                     </>
                   )}
+                  </div>
                 </td>
               </tr>
             ))}
