@@ -55,7 +55,6 @@ export default function Carte() {
         nom,
         member_id: data.member_id,
         email: data.email,
-        password: data.password,
         role: data.role,
       }),
     });
@@ -86,7 +85,10 @@ export default function Carte() {
       if (!cardRes.ok) console.warn("Erreur lors de l'ajout de la carte");
     }
 
-    setMsg({ type: "ok", text: "Utilisateur créé ✅" });
+    setMsg({
+      type: "ok",
+      text: "Utilisateur créé. Un email d'invitation a été envoyé.",
+    });
     e.currentTarget.reset();
   }
 
@@ -127,76 +129,10 @@ export default function Carte() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="block">
-          <span className="mb-2 block text-sm font-medium text-slate-700">
-            Mot de passe initial
-          </span>
-          <div className="password-field">
-            <input
-              name="password"
-              type="password"
-              minLength={8}
-              required
-              className="password-input w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-            />
-            <button
-              type="button"
-              className="password-toggle"
-              data-password-toggle
-              aria-label="Afficher le mot de passe"
-              aria-pressed="false"
-            >
-              <svg
-                className="icon-show"
-                viewBox="0 0 24 24"
-                width="20"
-                height="20"
-                aria-hidden="true"
-              >
-                <path
-                  d="M1.5 12s3.5-6 10.5-6 10.5 6 10.5 6-3.5 6-10.5 6S1.5 12 1.5 12Z"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="3"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                />
-              </svg>
-              <svg
-                className="icon-hide"
-                viewBox="0 0 24 24"
-                width="20"
-                height="20"
-                aria-hidden="true"
-              >
-                <path
-                  d="M3 3l18 18"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M10.6 6.3A11.3 11.3 0 0 1 12 6c7 0 10.5 6 10.5 6a18.5 18.5 0 0 1-3.2 3.8M6.7 6.7C3.5 8.7 1.5 12 1.5 12s3.5 6 10.5 6c1.8 0 3.4-.4 4.8-1"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          </div>
-        </label>
-
+        <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-900">
+          Le mot de passe sera choisi par l'utilisateur depuis le lien reçu par
+          email.
+        </div>
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-slate-700">
             Rôle

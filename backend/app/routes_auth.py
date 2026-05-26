@@ -6,6 +6,8 @@ from itsdangerous import BadSignature, SignatureExpired
 from .email_utils import send_email
 from .password_reset import generate_reset_token, verify_reset_token
 from sqlalchemy.exc import IntegrityError
+from urllib.parse import urlencode
+import re
 
 
 bp_auth = Blueprint("auth", __name__)
@@ -169,7 +171,7 @@ def request_password_reset():
     base_url = (current_app.config.get("FRONTEND_BASE_URL") or "").strip()
     if not base_url:
         base_url = request.host_url.rstrip("/")
-    reset_url = f"{base_url}/ResetPassword?token={token}"
+    reset_url = f"{base_url}/ResetPassword?{urlencode({'token': token})}"
     max_age = int(current_app.config.get("PASSWORD_RESET_TOKEN_MAX_AGE", 3600))
     minutes = max(1, int(max_age / 60))
 
@@ -198,7 +200,7 @@ def request_password_reset():
 @bp_auth.route("/api/auth/reset-password", methods=["POST"])
 def reset_password():
     data = request.get_json(silent=True) or {}
-    token = (data.get("token") or "").strip()
+    token = re.sub(r"\s+", "", (data.get("token") or "").strip().strip("<>"))
     new_password = (data.get("new_password") or "").strip()
 
     if not token or not new_password or len(new_password) < 8:

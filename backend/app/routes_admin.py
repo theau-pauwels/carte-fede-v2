@@ -1,10 +1,14 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from sqlalchemy.orm import joinedload
 from .models import db, User, Role, Membership, Room, VoteSession, VoteOption, VoteBallot, RoomAllowedMember
+from .email_utils import send_email
+from .password_reset import generate_reset_token
 from datetime import datetime, timedelta
+from urllib.parse import urlencode
 import re
+import secrets
 
 bp_admin = Blueprint("admin", __name__)
 
@@ -43,6 +47,35 @@ def _session_to_dict(session: VoteSession):
         "options": [{"id": o.id, "text": o.text} for o in (session.options or [])],
     }
 
+def _frontend_url(path: str) -> str:
+    base_url = (current_app.config.get("FRONTEND_BASE_URL") or "").strip()
+    if not base_url:
+        base_url = request.host_url.rstrip("/")
+    return f"{base_url}{path}"
+
+def _invitation_recipient(user: User):
+    return user.email or (f"{user.member_id}@umons.ac.be" if user.member_id else None)
+
+def _send_invitation_email(user: User):
+    recipient = _invitation_recipient(user)
+    if not recipient:
+        raise ValueError("Aucune adresse email disponible pour envoyer l'invitation")
+
+    token = generate_reset_token(user)
+    query = urlencode({"mode": "invite", "token": token})
+    invite_url = _frontend_url(f"/ResetPassword?{query}")
+    max_age = int(current_app.config.get("PASSWORD_RESET_TOKEN_MAX_AGE", 3600))
+    minutes = max(1, int(max_age / 60))
+
+    body = (
+        f"Bonjour {user.prenom or ''},\n\n"
+        "Un compte vient d'être créé pour vous.\n"
+        f"Pour confirmer votre inscription et choisir votre mot de passe, cliquez sur ce lien (valable {minutes} min):\n"
+        f"{invite_url}\n\n"
+        "Si vous n'êtes pas concerné par cette invitation, ignorez cet email."
+    )
+    send_email(recipient, "Finaliser votre inscription", body)
+
 @bp_admin.route("/api/admin/users", methods=["GET", "POST"])
 @login_required
 def users_collection():
@@ -52,10 +85,9 @@ def users_collection():
         prenom = (data.get("prenom") or "").strip()
         email = (data.get("email") or "").strip().lower() or None
         member_id = (data.get("member_id") or "").strip() or None
-        password = (data.get("password") or "").strip()
 
-        if not nom or not prenom or not password:
-            return jsonify({"error": "Champs requis: nom, prenom, password + (member_id OU email)"}), 400
+        if not nom or not prenom:
+            return jsonify({"error": "Champs requis: nom, prenom + (member_id OU email)"}), 400
         if not member_id and not email:
             return jsonify({"error": "Fournir soit un identifiant à 6 chiffres, soit un email"}), 400
         if member_id and (len(member_id) != 6 or not member_id.isdigit()):
@@ -77,7 +109,7 @@ def users_collection():
             prenom=prenom,
             email=email,
             member_id=member_id,
-            password_hash=generate_password_hash(password),
+            password_hash=generate_password_hash(secrets.token_urlsafe(32)),
             role=role,
         )
         db.session.add(user)
@@ -91,8 +123,15 @@ def users_collection():
                 m = Membership(user_id=user.id, annee=annee, annee_code=annee_code)
                 db.session.add(m)
 
-        db.session.commit()
-        return jsonify({"ok": True, "id": user.id})
+        try:
+            _send_invitation_email(user)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("User invitation email failed")
+            return jsonify({"error": "Utilisateur non créé: impossible d'envoyer l'email d'invitation"}), 502
+
+        return jsonify({"ok": True, "id": user.id, "invitation_sent": True})
 
     # GET: lister avec dictionnaire {annee: code} + rôle
     users = (
